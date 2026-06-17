@@ -1,0 +1,47 @@
+# ── Python / Backend ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.env
+.env.*
+!.env.example
+*.sqlite3
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Uploads & generated outputs (large binary data)
+backend/uploads/*.csv
+backend/uploads/*.xlsx
+backend/outputs/
+
+# Alembic versions cache
+backend/alembic/__pycache__/
+backend/alembic/versions/__pycache__/
+
+# ── Node / Frontend ───────────────────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env*
+!frontend/.env.example
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+frontend/.vercel
+frontend/coverage/
+
+# ── Docker ────────────────────────────────────────────────────────────
+*.log
+
+# ── OS ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
