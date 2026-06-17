@@ -17,8 +17,7 @@ EXPECTED_COLUMNS = [
 
 # Accept payment modes from common gateways — not hardcoded per country
 VALID_PAYMENT_MODES = {
-    "UPI", "CARD", "NETBANKING", "CASH", "NET BANKING",
-    "CREDIT CARD", "DEBIT CARD", "WALLET", "PAYPAL",
+    "UPI", "CARD", "NETBANKING", "CASH",
 }
 
 COLUMN_ALIASES = {
@@ -134,13 +133,14 @@ class ValidationService:
             try:
                 schema.validate(df, lazy=True)
             except pa.errors.SchemaErrors as exc:
-                for _, row in exc.failure_cases.to_pandas().iterrows():
-                    ridx = int(row.get("index", -1))
-                    if ridx < 0:
+                # Use native Polars iteration — no pyarrow needed
+                for row in exc.failure_cases.iter_rows(named=True):
+                    ridx = row.get("index")
+                    if ridx is None or ridx < 0:
                         continue
-                    col = str(row.get("column", ""))
-                    check = str(row.get("check", ""))
-                    pandera_errors.setdefault(ridx, []).append(f"{col}: {check}")
+                    col = str(row.get("column") or "")
+                    check = str(row.get("check") or "")
+                    pandera_errors.setdefault(int(ridx), []).append(f"{col}: {check}")
         else:
             logger.warning(
                 f"Job {job_id}: skipping Pandera — missing columns "

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import * as THREE from 'three'
 
 interface ValidationCoreProps {
     intensity?: number
@@ -59,9 +60,6 @@ export default function ValidationCore({ intensity = 0 }: ValidationCoreProps) {
 
         const loadThree = async () => {
             try {
-                // @ts-ignore
-                const THREE = await import('three')
-
                 // Wait until the canvas actually has layout dimensions
                 const { w, h } = await waitForDimensions()
                 if (disposed) return

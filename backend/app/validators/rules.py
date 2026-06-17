@@ -34,9 +34,7 @@ def build_pandera_schema(phone_regex: str, date_format: str) -> pa.DataFrameSche
             ),
             "payment_mode": pa.Column(
                 str,
-                checks=pa.Check.isin(
-                    ["Credit Card", "Debit Card", "UPI", "Net Banking", "Wallet", "Paypal"]
-                ),
+                checks=pa.Check.str_matches(r"(?i)^(UPI|CARD|NETBANKING|CASH)$"),
                 coerce=True,
                 nullable=False,
             ),
