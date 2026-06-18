@@ -31,7 +31,12 @@ class Settings:
     # AI — Groq
     groq_api_key: str = field(default_factory=lambda: os.getenv("GROQ_API_KEY", ""))
 
-    # Storage
+    # Supabase Storage
+    supabase_url: str = field(default_factory=lambda: os.getenv("SUPABASE_URL", ""))
+    supabase_service_key: str = field(default_factory=lambda: os.getenv("SUPABASE_SERVICE_KEY", ""))
+    supabase_bucket_name: str = field(default_factory=lambda: os.getenv("SUPABASE_BUCKET_NAME", "xeno-uploads"))
+
+    # Storage (local temp directories)
     upload_dir: str = field(default_factory=lambda: os.getenv("UPLOAD_DIR", "./uploads"))
     output_dir: str = field(default_factory=lambda: os.getenv("OUTPUT_DIR", "./outputs"))
 
@@ -83,6 +88,15 @@ class Settings:
 
     @property
     def GROQ_API_KEY(self) -> str: return self.groq_api_key  # noqa: N802
+
+    @property
+    def SUPABASE_URL(self) -> str: return self.supabase_url  # noqa: N802
+
+    @property
+    def SUPABASE_SERVICE_KEY(self) -> str: return self.supabase_service_key  # noqa: N802
+
+    @property
+    def SUPABASE_BUCKET_NAME(self) -> str: return self.supabase_bucket_name  # noqa: N802
 
     @property
     def UPLOAD_DIR(self) -> str: return self.upload_dir  # noqa: N802

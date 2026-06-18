@@ -90,8 +90,16 @@ The Xeno backend requires two services on Railway:
 - Make sure to set the `GROQ_API_KEY` for AI report generation
 - The `railway.toml` file is located in the `backend/` directory
 - Use `python start_worker.py` as the start command for the worker service
+- ⚠️ **CRITICAL**: The worker service must have health checks DISABLED in Railway dashboard - it's a background process with no HTTP endpoints
 
 ## Troubleshooting
+
+### Worker deployment fails with "Healthcheck failure":
+- **This is the most common issue** - Railway tries to HTTP health check the worker
+- Go to Railway dashboard → Worker service → Settings
+- **Disable health checks completely** for the worker service
+- The worker is a background process and does not expose any HTTP endpoints
+- Once health checks are disabled, the deployment should succeed
 
 ### Worker not processing jobs:
 - Check Redis connection in worker logs

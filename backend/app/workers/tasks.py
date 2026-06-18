@@ -12,11 +12,12 @@ logger = logging.getLogger("xeno.worker")
 RETRY_POLICY = Retry(max=3, interval=[60, 120, 240])
 
 
-def process_dataset_task(job_id: str, file_path: str, country_code: str) -> None:
+def process_dataset_task(job_id: str, storage_path: str, country_code: str) -> None:
     """RQ entry point — orchestrates validation, DB updates, and AI report."""
     logger.info(f"Starting processing for job {job_id}")
+    local_file_path = None
     try:
-        asyncio.run(_process_async(job_id, file_path, country_code))
+        local_file_path = asyncio.run(_process_async(job_id, storage_path, country_code))
         logger.info(f"Finished processing job {job_id}")
     except Exception as exc:
         logger.error(
@@ -36,13 +37,22 @@ def process_dataset_task(job_id: str, file_path: str, country_code: str) -> None
             )
         # Re-raise so RQ can apply the retry policy
         raise
+    finally:
+        # Cleanup temporary downloaded file
+        if local_file_path:
+            try:
+                from app.services.storage import storage_service
+                storage_service.cleanup_temp_file(local_file_path)
+            except Exception as cleanup_exc:
+                logger.error(f"Failed to cleanup temp file {local_file_path}: {cleanup_exc}")
 
 
-async def _process_async(job_id: str, file_path: str, country_code: str) -> None:
+async def _process_async(job_id: str, storage_path: str, country_code: str) -> str:
     from app.config.db import session_scope
     from app.repositories.jobs import JobsRepository
     from app.services.validation import validation_service
     from app.services.ai import ai_service
+    from app.services.storage import storage_service
     from app.models.ai import AIReports
 
     # ── Step 1: Mark processing ───────────────────────────────────────────
@@ -54,13 +64,22 @@ async def _process_async(job_id: str, file_path: str, country_code: str) -> None
         job.status = "processing"
         await session.flush()
 
-    # ── Step 2: Run validation (timed) ───────────────────────────────────
+    # ── Step 2: Download file from Supabase Storage ─────────────────────
+    local_file_path = None
+    try:
+        local_file_path = storage_service.download_file(storage_path)
+        logger.info(f"Downloaded file from Supabase to {local_file_path}")
+    except Exception as exc:
+        logger.error(f"Failed to download file from Supabase: {exc}")
+        raise RuntimeError(f"Failed to download file from storage: {str(exc)}")
+
+    # ── Step 3: Run validation (timed) ───────────────────────────────────
     t_start = time.monotonic()
-    result = await validation_service.process_dataset(job_id, file_path, country_code)
+    result = await validation_service.process_dataset(job_id, local_file_path, country_code)
     t_end = time.monotonic()
     processing_time_ms = int((t_end - t_start) * 1000)
 
-    # ── Step 3: Persist metrics ───────────────────────────────────────────
+    # ── Step 4: Persist metrics ───────────────────────────────────────────
     async with session_scope() as session:
         repo = JobsRepository(session)
         job = await repo.get_by_id(job_id)
@@ -75,7 +94,7 @@ async def _process_async(job_id: str, file_path: str, country_code: str) -> None
         job.processing_time_ms   = processing_time_ms
         await session.flush()
 
-    # ── Step 4: AI report ────────────────────────────────────────────────
+    # ── Step 5: AI report ────────────────────────────────────────────────
     ai_report_data = await ai_service.generate_quality_report(
         {
             "job_id": job_id,
@@ -89,7 +108,7 @@ async def _process_async(job_id: str, file_path: str, country_code: str) -> None
         result.get("error_logs", []),
     )
 
-    # ── Step 5: Save AI report ────────────────────────────────────────────
+    # ── Step 6: Save AI report ────────────────────────────────────────────
     async with session_scope() as session:
         repo = JobsRepository(session)
         report = AIReports(
@@ -102,13 +121,15 @@ async def _process_async(job_id: str, file_path: str, country_code: str) -> None
         )
         await repo.save_ai_report(report)
 
-    # ── Step 6: Mark completed ────────────────────────────────────────────
+    # ── Step 7: Mark completed ────────────────────────────────────────────
     async with session_scope() as session:
         repo = JobsRepository(session)
         job = await repo.get_by_id(job_id)
         if job:
             job.status = "completed"
             await session.flush()
+
+    return local_file_path
 
 
 async def _mark_failed(job_id: str, error_msg: str) -> None:

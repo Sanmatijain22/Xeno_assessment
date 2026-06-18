@@ -114,16 +114,39 @@ class UploadController(Controller):
         safe_name = f"{job_id}_{filename}"
         file_path = os.path.join(settings.UPLOAD_DIR, safe_name)
 
+        # Save file temporarily to local filesystem
         try:
             with open(file_path, "wb") as fh:
                 fh.write(content)
         except OSError as exc:
             raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}")
 
+        # Upload to Supabase Storage
+        storage_path = None
+        try:
+            from app.services.storage import storage_service
+            storage_path = storage_service.upload_file(file_path, safe_name)
+        except Exception as exc:
+            import logging
+            logger = logging.getLogger("xeno.api")
+            logger.error(
+                f"Failed to upload file to Supabase for job {job_id}:\n"
+                f"Error type: {type(exc).__name__}\n"
+                f"Error message: {str(exc)}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
+            # Cleanup local file on Supabase upload failure
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except OSError as cleanup_exc:
+                    logger.error(f"Failed to cleanup file {file_path}: {cleanup_exc}")
+            raise HTTPException(status_code=500, detail=f"Failed to upload file to storage: {str(exc)}")
+
         try:
             repo = JobsRepository(session)
             uploaded_file = UploadedFiles(
-                filename=filename, file_path=file_path,
+                filename=filename, storage_path=storage_path,
                 file_size=file_size,
                 mime_type=file_item.content_type or "application/octet-stream",
             )
@@ -142,17 +165,27 @@ class UploadController(Controller):
                 f"Error message: {str(exc)}\n"
                 f"Traceback:\n{traceback.format_exc()}"
             )
+            # Cleanup local file and Supabase file on DB error
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
                 except OSError as cleanup_exc:
-                    logger.error(
-                        f"Failed to cleanup file {file_path} after DB error:\n"
-                        f"Error type: {type(cleanup_exc).__name__}\n"
-                        f"Error message: {str(cleanup_exc)}\n"
-                        f"Traceback:\n{traceback.format_exc()}"
-                    )
+                    logger.error(f"Failed to cleanup file {file_path}: {cleanup_exc}")
+            try:
+                from app.services.storage import storage_service
+                storage_service.delete_file(storage_path)
+            except Exception as storage_cleanup_exc:
+                logger.error(f"Failed to cleanup Supabase file {storage_path}: {storage_cleanup_exc}")
             raise HTTPException(status_code=500, detail=f"DB registration failed: {str(exc)}")
+
+        # Cleanup local temp file after successful upload and DB registration
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except OSError as exc:
+            import logging
+            logger = logging.getLogger("xeno.api")
+            logger.warning(f"Failed to cleanup temp file {file_path}: {exc}")
 
         try:
             redis_conn = Redis.from_url(settings.REDIS_URL)
@@ -160,7 +193,7 @@ class UploadController(Controller):
             from rq import Retry
             q.enqueue(
                 "app.workers.tasks.process_dataset_task",
-                job_id, file_path, country_code,
+                job_id, storage_path, country_code,
                 retry=Retry(max=3, interval=[60, 120, 240]),
             )
         except Exception as exc:
