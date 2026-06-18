@@ -28,7 +28,8 @@ COLUMN_ALIASES = {
 }
 
 # Permissive fallback used only when no DB rule is found for a country
-_FALLBACK_PHONE_REGEX = r"^\+?\d{7,15}$"
+# Updated to accept local format numbers without country prefix
+_FALLBACK_PHONE_REGEX = r"^\d{7,15}$"
 
 
 def _is_valid_phone(phone_val: str, phone_regex: str) -> bool:
@@ -189,6 +190,10 @@ class ValidationService:
                 if row_rule and row_rule.valid_payment_modes else None
             )
 
+            # Log phone regex for first row of each country
+            if row_idx == 0:
+                logger.info(f"Job {job_id}: Country '{display_country}' using phone_regex: {phone_regex}")
+
             # Surface Pandera failures for this row
             for pe in pandera_errors.get(row_idx, []):
                 row_errors.append({
@@ -215,6 +220,9 @@ class ValidationService:
             # Phone — DB regex only, no hardcoded digit-length tables
             if row.get("phone_number"):
                 phone_val = str(row["phone_number"]).strip()
+                # Log first 10 phone numbers for debugging
+                if row_idx < 10:
+                    logger.info(f"Job {job_id}: Row {row_idx + 1} phone value: '{phone_val}' against regex: {phone_regex}")
                 if not _is_valid_phone(phone_val, phone_regex):
                     row_errors.append({
                         "row_number": row_idx + 1,
