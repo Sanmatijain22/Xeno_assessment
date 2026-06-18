@@ -23,16 +23,16 @@ The Xeno backend requires two services on Railway:
 - **Repository**: Connect to your GitHub repository
 - **Root Directory**: `backend`
 - **Build Command**: (Auto-detected from Dockerfile)
-- **Start Command**: (Auto-detected from Dockerfile)
+- **Start Command**: (Auto-detected from Dockerfile) - uses default CMD
 - **Environment Variables**:
   - `ENV`: `production`
   - `DEBUG`: `false`
-  - `DB_HOST`: `${{RAILWAY_POSTGRES_HOST}}`
-  - `DB_PORT`: `${{RAILWAY_POSTGRES_PORT}}`
-  - `DB_USER`: `${{RAILWAY_POSTGRES_USER}}`
-  - `DB_PASSWORD`: `${{RAILWAY_POSTGRES_PASSWORD}}`
-  - `DB_NAME`: `${{RAILWAY_POSTGRES_DATABASE}}`
-  - `REDIS_URL`: `${{RAILWAY_REDIS_URL}}`
+  - `DB_HOST`: `${{postgresql.RAILWAY_PRIVATE_DOMAIN}}`
+  - `DB_PORT`: `${{postgresql.PORT}}`
+  - `DB_USER`: `${{postgresql.USERNAME}}`
+  - `DB_PASSWORD`: `${{postgresql.PASSWORD}}`
+  - `DB_NAME`: `${{postgresql.DATABASE}}`
+  - `REDIS_URL`: `${{redis.RAILWAY_PRIVATE_URL}}`
   - `GROQ_API_KEY`: Your Groq API key
   - `SECRET_KEY`: (Generate a secure random string)
   - `UPLOAD_DIR`: `./uploads`
@@ -43,7 +43,7 @@ The Xeno backend requires two services on Railway:
 - **Repository**: Connect to your GitHub repository (same as API)
 - **Root Directory**: `backend`
 - **Build Command**: (Auto-detected from Dockerfile)
-- **Start Command**: `python -m rq.cli worker --url $REDIS_URL default`
+- **Start Command**: `python start_worker.py`
 - **Environment Variables**: Same as API service (all required for DB access, Redis, etc.)
 
 ## Setup Steps
@@ -51,8 +51,28 @@ The Xeno backend requires two services on Railway:
 ### Step 1: Create Railway Project
 1. Go to [railway.app](https://railway.app)
 2. Create a new project
-3. Add PostgreSQL database
-4. Add Redis instance
+3. Add PostgreSQL database (name it something like "xeno-db")
+4. Add Redis instance (name it something like "xeno-redis")
+
+### Step 2: Deploy API Service
+1. Click "New Service" → "Deploy from GitHub repo"
+2. Select your repository
+3. Set root directory to `backend`
+4. Add all environment variables listed above
+5. Deploy
+
+### Step 3: Deploy Worker Service
+1. Click "New Service" → "Deploy from GitHub repo"  
+2. Select the same repository
+3. Set root directory to `backend`
+4. Set start command to: `python start_worker.py`
+5. Add the same environment variables as the API service
+6. Deploy
+
+### Step 4: Verify Setup
+1. Check API service logs to ensure it started successfully
+2. Check worker service logs to ensure it connected to Redis
+3. Test the API health endpoint: `https://your-api-url.railway.app/api/docs`
 
 ### Step 2: Deploy API Service
 1. Click "New Service" → "Deploy from GitHub repo"
@@ -80,6 +100,8 @@ The Xeno backend requires two services on Railway:
 - The worker service will automatically process jobs enqueued by the API service
 - Railway automatically provides the database and Redis connection URLs as variables
 - Make sure to set the `GROQ_API_KEY` for AI report generation
+- The `railway.toml` file is located in the `backend/` directory
+- Use `python start_worker.py` as the start command for the worker service
 
 ## Troubleshooting
 
