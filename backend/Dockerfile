@@ -29,5 +29,5 @@ COPY . .
 # Expose Litestar default port
 EXPOSE 8000
 
-# Default command launches the API layer
-CMD ["python", "main.py"]
+# Run database migrations and then start the API
+CMD sh -c "alembic upgrade head && python main.py"
