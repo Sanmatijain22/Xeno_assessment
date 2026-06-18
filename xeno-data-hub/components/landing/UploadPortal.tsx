@@ -79,7 +79,10 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
                 body: form,
             })
 
-            if (!res || !res.ok) {
+            if (!res) {
+                throw new Error('No response from server')
+            }
+            if (!res.ok) {
                 const body = await res.text()
                 throw new Error(body || `Server error ${res.status}`)
             }
