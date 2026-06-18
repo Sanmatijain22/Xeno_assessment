@@ -86,6 +86,7 @@ class StorageService:
             storage_path = os.path.basename(local_path)
         
         try:
+            logger.info(f"Uploading {local_path} to Supabase bucket {settings.supabase_bucket_name} as {storage_path}")
             with open(local_path, "rb") as f:
                 self.supabase.storage.from_(settings.supabase_bucket_name).upload(
                     storage_path, f
@@ -93,7 +94,13 @@ class StorageService:
             logger.info(f"Successfully uploaded {local_path} to {storage_path}")
             return storage_path
         except Exception as e:
-            logger.error(f"Failed to upload {local_path} to Supabase: {e}")
+            logger.error(
+                f"Failed to upload {local_path} to Supabase:\n"
+                f"Error type: {type(e).__name__}\n"
+                f"Error message: {str(e)}\n"
+                f"Bucket: {settings.supabase_bucket_name}\n"
+                f"Storage path: {storage_path}"
+            )
             raise
 
     def download_file(self, storage_path: str, local_path: Optional[str] = None) -> str:

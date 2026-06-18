@@ -164,6 +164,8 @@ class ValidationService:
         }
         country_stats: dict[str, dict[str, int]] = {}
 
+        logger.info(f"Job {job_id}: Starting row-level validation for {total_records} rows")
+
         for row_idx in range(total_records):
             row = df.row(row_idx, named=True)
             row_errors: list[dict] = []
@@ -291,6 +293,10 @@ class ValidationService:
                 valid_mask[row_idx] = False
                 error_logs.extend(row_errors)
                 country_stats[display_country]["invalid"] += 1
+                # Log first 10 errors for debugging
+                if len(error_logs) <= 10:
+                    for err in row_errors:
+                        logger.info(f"Job {job_id}: Row {row_idx + 1} error - {err['error_type']}: {err['error_message']}")
             else:
                 country_stats[display_country]["valid"] += 1
 

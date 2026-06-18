@@ -343,6 +343,7 @@ class UploadController(Controller):
             
             # Clean file
             if job.clean_file_path:
+                logger.info(f"Job {job_id}: Processing clean_file_path={job.clean_file_path}")
                 if job.clean_file_path.startswith("/") or job.clean_file_path.startswith("./"):
                     # Local filesystem path
                     clean_path = Path(job.clean_file_path)
@@ -350,17 +351,22 @@ class UploadController(Controller):
                         clean_url = f"/api/downloads/{job_id}/clean"
                         clean_rc = _safe_record_count(clean_path)
                         clean_sz = _safe_file_size(clean_path)
-                        logger.info(f"Job {job_id}: Clean file from local filesystem: {clean_path}")
+                        logger.info(f"Job {job_id}: Clean file from local filesystem: {clean_path}, url={clean_url}")
+                    else:
+                        logger.warning(f"Job {job_id}: Clean file path exists but file not found: {clean_path}")
                 else:
                     # Supabase storage path
                     try:
                         clean_url = storage_service.generate_signed_url(job.clean_file_path, expires_in=3600)
-                        logger.info(f"Job {job_id}: Clean file from Supabase: {job.clean_file_path}")
+                        logger.info(f"Job {job_id}: Clean file from Supabase: {job.clean_file_path}, url={clean_url}")
                     except Exception as e:
                         logger.error(f"Job {job_id}: Failed to generate signed URL for clean file: {e}")
+            else:
+                logger.warning(f"Job {job_id}: clean_file_path is None or empty")
             
             # Error file
             if job.error_report_path:
+                logger.info(f"Job {job_id}: Processing error_report_path={job.error_report_path}")
                 if job.error_report_path.startswith("/") or job.error_report_path.startswith("./"):
                     # Local filesystem path
                     error_path = Path(job.error_report_path)
@@ -368,14 +374,18 @@ class UploadController(Controller):
                         error_url = f"/api/downloads/{job_id}/errors"
                         error_rc = _safe_record_count(error_path)
                         error_sz = _safe_file_size(error_path)
-                        logger.info(f"Job {job_id}: Error file from local filesystem: {error_path}")
+                        logger.info(f"Job {job_id}: Error file from local filesystem: {error_path}, url={error_url}")
+                    else:
+                        logger.warning(f"Job {job_id}: Error file path exists but file not found: {error_path}")
                 else:
                     # Supabase storage path
                     try:
                         error_url = storage_service.generate_signed_url(job.error_report_path, expires_in=3600)
-                        logger.info(f"Job {job_id}: Error file from Supabase: {job.error_report_path}")
+                        logger.info(f"Job {job_id}: Error file from Supabase: {job.error_report_path}, url={error_url}")
                     except Exception as e:
                         logger.error(f"Job {job_id}: Failed to generate signed URL for error file: {e}")
+            else:
+                logger.warning(f"Job {job_id}: error_report_path is None or empty")
             
             # Chunks - for now, we'll need to store chunk paths in DB or generate them
             # For simplicity, we'll skip chunks for Supabase for now
@@ -383,6 +393,8 @@ class UploadController(Controller):
             
         except Exception as e:
             logger.error(f"Job {job_id}: Error getting download URLs: {e}")
+
+        logger.info(f"Job {job_id}: Final download URLs - clean_url={clean_url}, error_url={error_url}")
 
         return DownloadLinksResponse(
             job_id=job_id,
