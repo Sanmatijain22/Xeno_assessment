@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from groq import Groq
 from app.config.settings import settings
 
@@ -72,14 +73,19 @@ Respond with valid JSON only. No markdown, no explanation outside the JSON."""
             return json.loads(raw)
 
         except Exception as exc:
-            logger.error("Groq AI report generation failed: %s", exc)
+            logger.error(
+                f"Groq AI report generation failed:\n"
+                f"Error type: {type(exc).__name__}\n"
+                f"Error message: {str(exc)}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
             # Return a safe fallback so the job still completes
             return {
                 "quality_score": 0.0,
                 "common_errors": [],
                 "country_analysis": {},
                 "recommendations": ["AI report unavailable — check GROQ_API_KEY and retry."],
-                "executive_summary": f"AI analysis could not be completed: {exc}",
+                "executive_summary": f"AI analysis could not be completed: {str(exc)}",
             }
 
 

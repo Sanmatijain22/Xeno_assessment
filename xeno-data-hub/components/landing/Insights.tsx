@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
+import { EASE_OUT, motionDuration, cssDuration } from '@/lib/motion'
 
 const BAR_DATA = [
     { label: 'Phone', pct: 62 },
@@ -98,7 +99,7 @@ export default function Insights({ latestJob, latestReport }: InsightsProps) {
                     initial={{ opacity: 0, x: -24 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true, margin: '-10% 0px' }}
-                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: motionDuration(0.7), ease: EASE_OUT }}
                 >
                     <div
                         style={{
@@ -132,7 +133,7 @@ export default function Insights({ latestJob, latestReport }: InsightsProps) {
                             maxWidth: 560,
                         }}
                     >
-                        Gemini reads the whole batch the way a senior analyst would —
+                        Groq reads the whole batch the way a senior analyst would —
                         looking for what's connected, not just what's broken.
                     </p>
 
@@ -190,7 +191,7 @@ export default function Insights({ latestJob, latestReport }: InsightsProps) {
                     className="hover-card"
                     initial={{ opacity: 0, y: 28 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                    transition={{ duration: motionDuration(0.8), ease: EASE_OUT, delay: motionDuration(0.15) }}
                     style={{
                         background:
                             'linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))',
@@ -278,7 +279,7 @@ export default function Insights({ latestJob, latestReport }: InsightsProps) {
                                     strokeLinecap="round"
                                     strokeDasharray={circ}
                                     strokeDashoffset={strokeDashoffset}
-                                    style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
+                                    style={{ transition: `stroke-dashoffset ${cssDuration(0.8)}s ease-in-out` }}
                                 />
                             </svg>
                             <div
@@ -388,7 +389,7 @@ export default function Insights({ latestJob, latestReport }: InsightsProps) {
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={isInView ? { width: `${bar.pct}%` } : {}}
-                                        transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
+                                        transition={{ duration: motionDuration(1), ease: 'easeOut', delay: motionDuration(0.5) }}
                                         style={{
                                             height: '100%',
                                             borderRadius: 6,

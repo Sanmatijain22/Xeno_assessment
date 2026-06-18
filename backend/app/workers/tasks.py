@@ -1,6 +1,7 @@
 import time
 import logging
 import asyncio
+import traceback
 from redis import Redis
 from rq import Queue, Worker, Retry
 from app.config.settings import settings
@@ -18,11 +19,21 @@ def process_dataset_task(job_id: str, file_path: str, country_code: str) -> None
         asyncio.run(_process_async(job_id, file_path, country_code))
         logger.info(f"Finished processing job {job_id}")
     except Exception as exc:
-        logger.exception(f"Job {job_id} failed: {exc}")
+        logger.error(
+            f"Job {job_id} failed with full traceback:\n"
+            f"Error type: {type(exc).__name__}\n"
+            f"Error message: {str(exc)}\n"
+            f"Traceback:\n{traceback.format_exc()}"
+        )
         try:
             asyncio.run(_mark_failed(job_id, str(exc)))
-        except Exception:
-            logger.exception(f"Could not mark job {job_id} as failed in DB")
+        except Exception as mark_exc:
+            logger.error(
+                f"Could not mark job {job_id} as failed in DB:\n"
+                f"Error type: {type(mark_exc).__name__}\n"
+                f"Error message: {str(mark_exc)}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
         # Re-raise so RQ can apply the retry policy
         raise
 

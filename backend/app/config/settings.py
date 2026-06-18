@@ -8,7 +8,7 @@ from sqlalchemy.engine import URL
 class Settings:
     # General
     env: str = field(default_factory=lambda: os.getenv("ENV", "development"))
-    debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "true").lower() == "true")
+    debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
     secret_key: str = field(default_factory=lambda: os.getenv("SECRET_KEY", ""))
 
     # Database — individual components (avoids @ in password breaking URL parsing)

@@ -17,7 +17,7 @@ backend/
 │   │   └── upload.py        # Dataset ingestion & job status monitoring API
 │   ├── services/            # Core business logic orchestrators
 │   │   ├── __init__.py      # Exposes services singletons
-│   │   ├── ai.py            # Gemini API integration service
+│   │   ├── ai.py            # Groq API integration service
 │   │   ├── storage.py       # Local file storage path resolver
 │   │   └── validation.py    # Chunk validation manager (Polars + Pandera)
 │   ├── workers/             # Async background tasks poll loop
@@ -72,7 +72,7 @@ The system is decoupled into isolated single-responsibility layers:
 * **Serialization Layer**: Handled entirely by **msgspec** for both JSON parsing and DTO matching. Msgspec utilizes struct compiling to parse fields at native C speeds, avoiding Pydantic overhead.
 * **Database Access (ORM)**: Utilizes **SQLAlchemy 2.0**'s async extension (`asyncpg` driver) for non-blocking database operations, managing sessions using standard context manager scopes.
 * **Queue Engine (Redis + RQ)**: Uploads are processed asynchronously. File metadata is saved to PostgreSQL instantly, and the raw file processing task is enqueued onto Redis.
-* **Worker Layer (RQ Workers)**: Background worker loops polling the queue, running validations, splitting chunks, and prompting the Gemini API.
+* **Worker Layer (RQ Workers)**: Background worker loops polling the queue, running validations, splitting chunks, and prompting the Groq API.
 * **Streaming Validation Pipeline**: Utilizes **Polars** to read datasets lazily (`pl.scan_csv`) and streams chunks, avoiding loading raw multi-gigabyte datasets entirely into memory. Data validation constraints are enforced using **Pandera**.
 
 ---
@@ -123,7 +123,7 @@ Granular catalog of all rows failing Pandera assertions checks:
 * `created_at` (`TIMESTAMPTZ`)
 
 ### 5. `ai_reports` Table
-Parsed dashboard analytics received from Gemini:
+Parsed dashboard analytics received from Groq:
 * `id` (`UUID`, PK)
 * `job_id` (`VARCHAR(50)`, FK `processing_jobs.id`, Unique, Indexed): Associated job entry.
 * `quality_score` (`FLOAT`): Aggregated validation score.
@@ -145,7 +145,7 @@ Endpoints exchange msgspec-validated schemas:
 * `GET /api/jobs/{job_id}`: Retrieves job detail metrics and record counts.
 * `GET /api/jobs/{job_id}/status`: Fetches minimal heartbeat status payload.
 * `GET /api/jobs/{job_id}/downloads`: Returns location paths pointing to clean files, error reports, and chunks.
-* `GET /api/jobs/{job_id}/report`: Returns the parsed Gemini AI report.
+* `GET /api/jobs/{job_id}/report`: Returns the parsed Groq AI report.
 
 ### Validation Rules Configuration Group
 * `GET /api/rules`: Returns list of rules parameters.
@@ -163,7 +163,7 @@ Background task execution uses RQ (Redis Queue):
    `queue.enqueue(process_dataset_task, job_id, file_path, country_code)`
 2. **Poll**: The RQ worker process listens to the Redis connection, popping the task when a worker loop becomes idle.
 3. **Status Update**: The worker sets the database `status` to `processing`.
-4. **Execution**: The worker launches the streaming validator, populates logs, and sends statistics to Gemini.
+4. **Execution**: The worker launches the streaming validator, populates logs, and sends statistics to Groq.
 5. **Finalize**: The worker updates the job `status` to `completed` (or `failed` if an unhandled exception occurred) and saves the generated output paths.
 
 ---
@@ -181,7 +181,7 @@ Data evaluation uses Polars and Pandera for streaming execution:
    - Append passing records to `clean_transactions.csv` and split them into sub-files (`chunk_n.csv`).
    - Append failing records to `error_report.csv` alongside row indexes and failure reasons.
 4. **Aggregation**: Save validation log batches to the database. Generate final counts of valid/invalid records.
-5. **AI Report Synthesis**: Send aggregated quality metrics (error counts by column, error type logs) to Gemini. Save the generated report payload to `ai_reports` in PostgreSQL.
+5. **AI Report Synthesis**: Send aggregated quality metrics (error counts by column, error type logs) to Groq. Save the generated report payload to `ai_reports` in PostgreSQL.
 
 ---
 
@@ -190,7 +190,7 @@ Data evaluation uses Polars and Pandera for streaming execution:
 * **`UploadController` (`app/api/upload.py`)**: Entry point for API inputs. Handles uploads, validates metadata limits, saves file inputs to disk, and pushes task commands to Redis.
 * **`RulesController` (`app/api/rules.py`)**: Interface for configuring country validation schemas.
 * **`ValidationService` (`app/services/validation.py`)**: Coordinates the data processing pipeline. Handles lazy data scanning, Pandera validation checks, and error logging.
-* **`AIService` (`app/services/ai.py`)**: Constructs prompt contexts from validation statistics and calls the Gemini API.
+* **`AIService` (`app/services/ai.py`)**: Constructs prompt contexts from validation statistics and calls the Groq API.
 * **`StorageService` (`app/services/storage.py`)**: Manages physical output directories and paths mapping.
 * **`BaseRepository` (`app/repositories/base.py`)**: Core database CRUD interface using SQLAlchemy async session calls.
 * **`JobsRepository` (`app/repositories/jobs.py`)**: Implements database interactions for processing jobs, validation logs, and AI reports.
@@ -207,7 +207,7 @@ The system relies on the following configurations (defined in `.env`):
 * `DATABASE_URL`: Asyncpg driver URL for SQLAlchemy asyncio commands (`postgresql+asyncpg://...`).
 * `DATABASE_SYNC_URL`: Sync driver connection URL for Alembic migration scripts.
 * `REDIS_URL`: Connection string pointing to Redis cache database.
-* `GEMINI_API_KEY`: API token key enabling Gemini queries.
+* `GROQ_API_KEY`: API token key enabling Groq queries.
 * `UPLOAD_DIR` / `OUTPUT_DIR`: Path coordinates defining where transaction files and processed data are saved.
 
 ---
@@ -220,4 +220,4 @@ The production environment is structured as follows:
 * **SaaS Cache Layer**: Task scheduling queues hosted on **Upstash Redis** (low latency, SSL protected).
 * **API Service Layer**: Host service deployed to **Railway** running Litestar ASGI web apps inside multi-stage Docker runner instances, scaled horizontally behind Railway's internal proxy balancer.
 * **Worker Service Layer**: Decoupled RQ Workers deployed as background services on **Railway**, connecting to Upstash Redis and Neon Postgres databases.
-* **AI Service Layer**: Calls the **Gemini API** directly from the RQ Worker runtime.
+* **AI Service Layer**: Calls the **Groq API** directly from the RQ Worker runtime.

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { EASE_OUT, motionDuration } from '@/lib/motion'
 
 /* ── Node data ── */
 const STACK_NODES = [
@@ -122,7 +123,7 @@ function Particle({ delay, seed }: { delay: number; seed: number }) {
       fill={seed % 3 === 0 ? '#f5b042' : seed % 2 === 0 ? '#4c8dff' : '#9b6bff'}
       initial={{ opacity: 0, y: 0 }}
       animate={{ opacity: [0, 0.4, 0], y: [0, dy] }}
-      transition={{ duration: dur, delay, repeat: Infinity, ease: 'easeOut', repeatDelay: 1.0 }}
+      transition={{ duration: dur, delay, repeat: Infinity, ease: 'easeOut', repeatDelay: 1.5 }}
     />
   )
 }
@@ -144,7 +145,7 @@ function EdgePulse({ from, to, active, pathIdx }: { from: string; to: string; ac
           initial={{ cx: a.x, cy: a.y, opacity: 0, scale: 0.3 }}
           animate={{ cx: b.x, cy: b.y, opacity: [0, 0.9, 0.9, 0], scale: [0.3, 1, 1, 0.3] }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.78, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: motionDuration(0.78), ease: [0.4, 0, 0.2, 1] }}
         />
       )}
     </AnimatePresence>
@@ -181,7 +182,7 @@ function StackNode({ node }: { node: (typeof STACK_NODES)[number] }) {
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       whileHover={{ y: -6 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 28 }}
       style={{ cursor: 'default' }}
     >
       {/* Card */}
@@ -222,7 +223,7 @@ function StackNode({ node }: { node: (typeof STACK_NODES)[number] }) {
             initial={{ opacity: 0, y: tipBelow ? -4 : 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.16, ease: 'easeOut' }}
+            transition={{ duration: motionDuration(0.16), ease: 'easeOut' }}
           >
             <rect x={tipX} y={tipY} width={tipW} height={54} rx={8}
               fill="rgba(8,9,14,0.97)" stroke="rgba(155,107,255,0.28)" strokeWidth={1}
@@ -256,7 +257,7 @@ function StatCard({ value, label, accent, delay }: { value: string; label: strin
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: motionDuration(0.5), delay, ease: EASE_OUT }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -298,7 +299,7 @@ function FlowStep({ step, idx }: { step: typeof FLOW_STEPS[number]; idx: number 
       initial={{ opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.45, delay: idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: motionDuration(0.45), delay: idx * 0.11, ease: EASE_OUT }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -400,7 +401,7 @@ export default function Architecture() {
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: motionDuration(0.7), ease: EASE_OUT }}
           style={{ textAlign: 'center', marginBottom: 48 }}
         >
           <div style={{
@@ -514,7 +515,7 @@ export default function Architecture() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: motionDuration(0.6), ease: EASE_OUT }}
         >
           <div style={{
             fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,

@@ -1,61 +1,34 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
+import { EASE_OUT, motionDuration } from '@/lib/motion'
 
 /* ─────────────────────────────────────────
    SpotlightLabel — cursor-reactive radial glow on titles
    ───────────────────────────────────────── */
 function SpotlightLabel({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLSpanElement>(null)
+  const glowRef = useRef<HTMLSpanElement>(null)
   const [hovered, setHovered] = useState(false)
-  const [pos, setPos] = useState({ x: 0, y: 0 })
-  const targetPos = useRef({ x: 0, y: 0 })
-  const animPos = useRef({ x: 0, y: 0 })
-  const rafRef = useRef<number | null>(null)
-
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-
-  const tick = useCallback(() => {
-    animPos.current.x = lerp(animPos.current.x, targetPos.current.x, 0.14)
-    animPos.current.y = lerp(animPos.current.y, targetPos.current.y, 0.14)
-    setPos({ x: animPos.current.x, y: animPos.current.y })
-    rafRef.current = requestAnimationFrame(tick)
-  }, [])
 
   const onMove = (e: React.MouseEvent<HTMLSpanElement>) => {
-    if (!ref.current) return
+    if (!ref.current || !glowRef.current) return
     const rect = ref.current.getBoundingClientRect()
-    targetPos.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    glowRef.current.style.background = `radial-gradient(ellipse 110px 70px at ${e.clientX - rect.left}px ${e.clientY - rect.top}px, rgba(76,141,255,0.18) 0%, rgba(155,107,255,0.10) 55%, transparent 80%)`
   }
-
-  const onEnter = () => {
-    setHovered(true)
-    rafRef.current = requestAnimationFrame(tick)
-  }
-
-  const onLeave = () => {
-    setHovered(false)
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-  }
-
-  // Cancel RAF on unmount to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    }
-  }, [])
 
   return (
     <span
       ref={ref}
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onMouseMove={onMove}
       style={{ position: 'relative', display: 'inline' }}
     >
       {children}
       <span
+        ref={glowRef}
         aria-hidden
         style={{
           position: 'absolute',
@@ -64,7 +37,6 @@ function SpotlightLabel({ children }: { children: React.ReactNode }) {
           pointerEvents: 'none',
           opacity: hovered ? 1 : 0,
           transition: 'opacity 0.3s ease',
-          background: `radial-gradient(ellipse 110px 70px at ${pos.x}px ${pos.y}px, rgba(76,141,255,0.18) 0%, rgba(155,107,255,0.10) 55%, transparent 80%)`,
           willChange: 'background',
         }}
       />
@@ -188,8 +160,8 @@ function VisualCard({
       animate={isInView ? { opacity: 1, scale: 1 } : {}}
       whileHover={{ y: -5 }}
       transition={{
-        opacity: { duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: index * 0.07 + 0.2 },
-        scale: { duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: index * 0.07 + 0.2 },
+        opacity: { duration: motionDuration(0.55), ease: EASE_OUT, delay: index * 0.11 + motionDuration(0.2) },
+        scale: { duration: motionDuration(0.55), ease: EASE_OUT, delay: index * 0.11 + motionDuration(0.2) },
         y: { type: 'spring', stiffness: 260, damping: 22 },
       }}
       style={{
@@ -232,7 +204,7 @@ function Stage({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) {
       onMouseLeave={() => setHovered(false)}
       initial={{ opacity: 0, x: -32 }}
       animate={isInView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: index * 0.07 }}
+      transition={{ duration: motionDuration(0.65), ease: EASE_OUT, delay: index * 0.11 }}
       style={{
         position: 'relative',
         overflow: 'hidden',
@@ -252,8 +224,8 @@ function Stage({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) {
             key="scan-bg"
             initial={{ scaleX: 0, originX: 0 }}
             animate={{ scaleX: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.22 } }}
-            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, transition: { duration: motionDuration(0.22) } }}
+            transition={{ duration: motionDuration(0.85), ease: EASE_OUT }}
             style={{
               position: 'absolute',
               inset: 0,
@@ -275,8 +247,8 @@ function Stage({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) {
             key="scan-line"
             initial={{ scaleX: 0, originX: 0 }}
             animate={{ scaleX: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.18 } }}
-            transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, transition: { duration: motionDuration(0.18) } }}
+            transition={{ duration: motionDuration(0.75), ease: EASE_OUT }}
             style={{
               position: 'absolute',
               top: 0,
@@ -319,7 +291,7 @@ function Stage({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) {
                 }
               : {}
           }
-          transition={{ duration: 0.8, ease: 'easeOut', delay: index * 0.07 + 0.3 }}
+          transition={{ duration: motionDuration(0.8), ease: 'easeOut', delay: index * 0.11 + motionDuration(0.3) }}
           style={{
             width: 13,
             height: 13,
@@ -338,7 +310,7 @@ function Stage({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) {
         <motion.h3
           initial={{ opacity: 0, y: 12 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: index * 0.07 + 0.15 }}
+          transition={{ duration: motionDuration(0.5), ease: EASE_OUT, delay: index * 0.11 + motionDuration(0.15) }}
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
             fontSize: 22,
@@ -351,7 +323,7 @@ function Stage({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) {
         <motion.p
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.5, delay: index * 0.07 + 0.25 }}
+          transition={{ duration: motionDuration(0.5), delay: index * 0.11 + motionDuration(0.25) }}
           style={{
             color: 'var(--mist)',
             fontSize: 15,
@@ -381,23 +353,44 @@ export default function Pipeline() {
   const cometRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const updateComet = () => {
-      const wrap = railRef.current
-      const comet = cometRef.current
-      if (!wrap || !comet) return
+    const wrap = railRef.current
+    const comet = cometRef.current
+    if (!wrap || !comet) return
+
+    let ticking = false
+    let cachedHeight = 0
+    let cachedTop = 0
+
+    const measure = () => {
       const rect = wrap.getBoundingClientRect()
-      const total = rect.height
-      const viewportCenter = window.innerHeight * 0.5
-      let progress = (viewportCenter - rect.top) / total
-      progress = Math.max(0, Math.min(1, progress))
-      comet.style.top = `${progress * total}px`
+      cachedHeight = rect.height
+      cachedTop = rect.top
     }
-    window.addEventListener('scroll', updateComet, { passive: true })
-    window.addEventListener('resize', updateComet)
+
+    const updateComet = () => {
+      if (!cometRef.current) return
+      const viewportCenter = window.innerHeight * 0.5
+      let progress = (viewportCenter - cachedTop) / cachedHeight
+      progress = Math.max(0, Math.min(1, progress))
+      cometRef.current.style.top = `${progress * cachedHeight}px`
+      ticking = false
+    }
+
+    const onScrollOrResize = () => {
+      measure()
+      if (!ticking) {
+        ticking = true
+        requestAnimationFrame(updateComet)
+      }
+    }
+
+    measure()
     updateComet()
+    window.addEventListener('scroll', onScrollOrResize, { passive: true })
+    window.addEventListener('resize', onScrollOrResize, { passive: true })
     return () => {
-      window.removeEventListener('scroll', updateComet)
-      window.removeEventListener('resize', updateComet)
+      window.removeEventListener('scroll', onScrollOrResize)
+      window.removeEventListener('resize', onScrollOrResize)
     }
   }, [])
 
@@ -460,7 +453,7 @@ export default function Pipeline() {
           ref={headerRef}
           initial={{ opacity: 0, y: 32 }}
           animate={headerInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: motionDuration(0.8), ease: EASE_OUT }}
           style={{ maxWidth: 600, marginBottom: 88, paddingLeft: 'clamp(24px, 5vw, 56px)' }}
         >
           <div

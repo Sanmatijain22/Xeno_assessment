@@ -1,5 +1,6 @@
 import re
 import logging
+import traceback
 import polars as pl
 import pandera.polars as pa
 from pathlib import Path
@@ -83,7 +84,12 @@ class ValidationService:
             else:
                 raise ValueError(f"Unsupported file extension: {file_ext}")
         except Exception as e:
-            logger.error(f"Failed to read file {file_path}: {e}")
+            logger.error(
+                f"Failed to read file {file_path}:\n"
+                f"Error type: {type(e).__name__}\n"
+                f"Error message: {str(e)}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
             raise
 
         # Normalise column names

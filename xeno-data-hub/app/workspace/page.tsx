@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/shared/Navbar'
 import CustomCursor from '@/components/shared/CustomCursor'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
+import { cssDuration, cssDurationMs } from '@/lib/motion'
 const POLL_MS  = 3000
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ function fmtMs(ms: number): string {
 }
 
 // ─── Count-up hook ────────────────────────────────────────────────────────────
-function useCountUp(target: number, duration = 900): number {
+function useCountUp(target: number, duration = cssDurationMs(900)): number {
   const [val, setVal] = useState(0)
   const raf = useRef<number | null>(null)
   useEffect(() => {
@@ -81,7 +82,7 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   return (
     <div style={{
       opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(12px)',
-      transition: 'opacity 0.45s ease, transform 0.45s ease',
+      transition: `opacity ${cssDuration(0.45)}s ease, transform ${cssDuration(0.45)}s ease`,
     }}>
       {children}
     </div>
@@ -126,7 +127,7 @@ function StatusBadge({ status }: { status: JobStatus | 'loading' }) {
     }}>
       <span style={{
         width:8, height:8, borderRadius:'50%', background:c,
-        animation: pulse ? 'pulse-dot 1.5s infinite' : 'none',
+        animation: pulse ? `pulse-dot ${cssDuration(1.5)}s infinite` : 'none',
         boxShadow:`0 0 8px ${c}`,
       }}/>
       {label}
@@ -144,7 +145,7 @@ function PipelineTracker({ status }: { status: JobStatus | 'loading' }) {
         position:'absolute', top:15, left:30,
         width:`${Math.min((activeIdx/3)*100,100)}%`, maxWidth:'calc(100% - 60px)',
         height:2, background: status==='failed'?'#f87171':'var(--refine)',
-        transition:'width 0.6s ease', zIndex:0,
+        transition:`width ${cssDuration(0.6)}s ease`, zIndex:0,
       }}/>
       {steps.map((label,i)=>{
         const done   = i < activeIdx || (i===3 && status==='completed')
@@ -282,7 +283,7 @@ function CountryAnalysisSection({ countryStats, countryNames }: { countryStats: 
               </div>
               {/* Pass-rate bar */}
               <div style={{ marginTop:12, height:3, borderRadius:2, background:'rgba(255,255,255,0.06)' }}>
-                <div style={{ height:3, borderRadius:2, background:col, width:`${passRate}%`, transition:'width 0.8s ease' }}/>
+                <div style={{ height:3, borderRadius:2, background:col, width:`${passRate}%`, transition:`width ${cssDuration(0.8)}s ease` }}/>
               </div>
             </div>
           )
@@ -305,8 +306,8 @@ function DownloadCard({ icon, label, accent, url, recordCount, fileSizeBytes }: 
     if (!url || downloading) return
     setDownloading(true)
     try {
-      const res = await fetch(`${API_BASE}${url}`)
-      if (!res.ok) throw new Error(`Download failed: ${res.status}`)
+      const res = await apiFetch(url)
+      if (!res || !res.ok) throw new Error(`Download failed: ${res?.status ?? 'offline'}`)
       const blob = await res.blob()
       const blobUrl = URL.createObjectURL(blob)
       // Extract filename from Content-Disposition header or generate from URL
@@ -527,7 +528,7 @@ function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIR
                     </span>
                   </div>
                   <div style={{ height:2, borderRadius:1, background:'rgba(255,255,255,0.05)', overflow:'hidden' }}>
-                    <div style={{ height:2, borderRadius:1, background:'#f87171', width:`${pct}%`, maxWidth:'100%', transition:'width 0.6s ease' }}/>
+                    <div style={{ height:2, borderRadius:1, background:'#f87171', width:`${pct}%`, maxWidth:'100%', transition:`width ${cssDuration(0.6)}s ease` }}/>
                   </div>
                 </div>
               )
@@ -618,8 +619,8 @@ function WorkspaceDashboard() {
 
   // Fetch country names from the DB-backed rules API — no static map
   useEffect(() => {
-    fetch(`${API_BASE}/api/rules`)
-      .then(r => r.ok ? r.json() : [])
+    apiFetch('/api/rules')
+      .then(r => r?.ok ? r.json() : [])
       .then((rules: Array<{ country_code: string; country_name: string }>) => {
         const map: Record<string, string> = {}
         rules.forEach(r => { map[r.country_code.toUpperCase()] = r.country_name })
@@ -648,7 +649,8 @@ function WorkspaceDashboard() {
     if (isDemo) return
     if (!jobId) { setStatus('failed'); setError('No job_id in URL.'); return }
     try {
-      const res = await fetch(`${API_BASE}/api/jobs/${jobId}`)
+      const res = await apiFetch(`/api/jobs/${jobId}`)
+      if (!res) return
       if (res.status === 404) { setStatus('failed'); setError(`Job ${jobId} not found.`); return }
       if (!res.ok) throw new Error(`Server ${res.status}`)
       const data: JobDetails = await res.json()
@@ -660,13 +662,13 @@ function WorkspaceDashboard() {
 
   const fetchReport = useCallback(async () => {
     if (isDemo || !jobId) return
-    try { const r = await fetch(`${API_BASE}/api/jobs/${jobId}/report`); if (r.ok) setReport(await r.json()) }
+    try { const r = await apiFetch(`/api/jobs/${jobId}/report`); if (r?.ok) setReport(await r.json()) }
     catch { /* non-fatal */ }
   }, [jobId, isDemo])
 
   const fetchDownloads = useCallback(async () => {
     if (isDemo || !jobId) return
-    try { const r = await fetch(`${API_BASE}/api/jobs/${jobId}/downloads`); if (r.ok) setDownloads(await r.json()) }
+    try { const r = await apiFetch(`/api/jobs/${jobId}/downloads`); if (r?.ok) setDownloads(await r.json()) }
     catch { /* non-fatal */ }
   }, [jobId, isDemo])
 

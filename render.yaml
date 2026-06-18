@@ -1,0 +1,62 @@
+services:
+  - type: web
+    name: xeno-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/docs
+    envVars:
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: OUTPUT_DIR
+        value: ./outputs
+
+  - type: worker
+    name: xeno-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    dockerCommand: python -m rq.cli worker --url $REDIS_URL default
+    envVars:
+      - key: ENV
+        value: production
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: OUTPUT_DIR
+        value: ./outputs

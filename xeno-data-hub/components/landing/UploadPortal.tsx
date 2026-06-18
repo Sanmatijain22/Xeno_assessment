@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
+import { motionDuration, cssDuration } from '@/lib/motion'
 
 interface UploadPortalProps {
     onIntensityChange?: (intensity: number) => void
@@ -20,128 +20,16 @@ const STATE_MESSAGES: Record<UploadState, string> = {
     error: '✗ Upload failed',
 }
 
-/* ─────────────────────────────────────────
-   PulseRing — one ring, fully self-contained lifecycle
-   Phase 1 (0 → 55%):  expand  0.7 → 1.8,  opacity 0 → 0.55 → 0.35
-   Phase 2 (55 → 100%): collapse 1.8 → 0.05, opacity 0.35 → 0
-   Result: energy absorbed back into the core, never just disappears
-   ───────────────────────────────────────── */
 function PulseRing({ delay, dragActive }: { delay: number; dragActive: boolean }) {
-    const ref = useRef<HTMLDivElement>(null)
-
     const ringColor = dragActive
         ? 'rgba(245,176,66,0.55)'
         : 'rgba(155,107,255,0.55)'
-    const glowColor = dragActive
-        ? 'rgba(245,176,66,0.22)'
-        : 'rgba(155,107,255,0.22)'
-    const duration = dragActive ? 1.8 : 3.5
-
-    useEffect(() => {
-        const el = ref.current
-        if (!el) return
-
-        let cancelled = false
-
-        const runCycle = async () => {
-            if (cancelled || !ref.current) return
-            const el = ref.current
-
-            // Reset to start state immediately (no visible jump — opacity is 0)
-            el.style.transform = 'translate(-50%, -50%) scale(0.7)'
-            el.style.opacity = '0'
-            el.style.boxShadow = `0 0 0px ${glowColor.replace('0.22', '0')}`
-
-            await new Promise(r => setTimeout(r, delay * 1000))
-            if (cancelled) return
-
-            // ── Phase 1: Expand out ──
-            // scale 0.7 → 1.8, opacity 0 → 0.55 → 0.35, glow brightens
-            const expandDur = duration * 0.55 * 1000
-
-            const startTime = performance.now()
-            await new Promise<void>(resolve => {
-                const tick = (now: number) => {
-                    if (cancelled) return resolve()
-                    const t = Math.min(1, (now - startTime) / expandDur)
-                    const ease = 1 - Math.pow(1 - t, 2.8) // ease-out cubic-ish
-
-                    const scale = 0.7 + ease * (1.8 - 0.7)
-                    // opacity arc: rises to 0.55 then falls to 0.35 across phase 1
-                    const opArc = t < 0.25
-                        ? t / 0.25                          // 0 → 1 (normalized)
-                        : 1 - ((t - 0.25) / 0.75) * 0.36   // 1 → 0.64 (normalized)
-                    const opacity = opArc * 0.55
-
-                    const glowStr = ease * 14
-                    const glowAlpha = ease * 0.22
-
-                    if (ref.current) {
-                        ref.current.style.transform = `translate(-50%, -50%) scale(${scale})`
-                        ref.current.style.opacity = String(opacity)
-                        ref.current.style.boxShadow = `0 0 ${glowStr.toFixed(1)}px rgba(155,107,255,${glowAlpha.toFixed(3)})`
-                    }
-
-                    if (t < 1) requestAnimationFrame(tick)
-                    else resolve()
-                }
-                requestAnimationFrame(tick)
-            })
-
-            if (cancelled) return
-
-            // ── Phase 2: Collapse back to core ──
-            // scale 1.8 → 0.05, opacity 0.35 → 0, glow fades
-            const collapseDur = duration * 0.45 * 1000
-            const collapseStart = performance.now()
-
-            await new Promise<void>(resolve => {
-                const tick = (now: number) => {
-                    if (cancelled) return resolve()
-                    const t = Math.min(1, (now - collapseStart) / collapseDur)
-                    // accelerate inward — ease-in quad
-                    const ease = t * t
-
-                    const scale = 1.8 - ease * (1.8 - 0.05)
-                    const opacity = (1 - ease) * 0.35
-                    const glowStr = (1 - ease) * 10
-                    const glowAlpha = (1 - ease) * 0.18
-
-                    if (ref.current) {
-                        ref.current.style.transform = `translate(-50%, -50%) scale(${scale})`
-                        ref.current.style.opacity = String(opacity)
-                        ref.current.style.boxShadow = `0 0 ${glowStr.toFixed(1)}px rgba(155,107,255,${glowAlpha.toFixed(3)})`
-                    }
-
-                    if (t < 1) requestAnimationFrame(tick)
-                    else resolve()
-                }
-                requestAnimationFrame(tick)
-            })
-
-            if (cancelled) return
-
-            // Fully invisible before looping
-            if (ref.current) {
-                ref.current.style.opacity = '0'
-                ref.current.style.transform = 'translate(-50%, -50%) scale(0.05)'
-            }
-
-            // Loop — no delay on subsequent cycles (stagger only on first)
-            runCycle()
-        }
-
-        runCycle()
-
-        return () => { cancelled = true }
-    // Re-run if drag state changes (different color/speed)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dragActive])
+    const duration = dragActive ? cssDuration(2.8) : cssDuration(5.5)
 
     return (
         <div
-            ref={ref}
             aria-hidden
+            className="pulse-ring"
             style={{
                 position: 'absolute',
                 width: 56,
@@ -150,8 +38,11 @@ function PulseRing({ delay, dragActive }: { delay: number; dragActive: boolean }
                 border: `1px solid ${ringColor}`,
                 opacity: 0,
                 pointerEvents: 'none',
-                willChange: 'transform, opacity',
                 transform: 'translate(-50%, -50%) scale(0.7)',
+                animation: `pulse-ring-cycle ${duration}s ease-out ${delay}s infinite`,
+                ['--pulse-glow-r' as string]: dragActive ? '245' : '155',
+                ['--pulse-glow-g' as string]: dragActive ? '176' : '107',
+                ['--pulse-glow-b' as string]: dragActive ? '66' : '255',
             }}
         />
     )
@@ -167,7 +58,7 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
 
     const uploadFile = useCallback(async (file: File) => {
         const ext = file.name.split('.').pop()?.toLowerCase()
-        if (!ext || !['csv', 'xlsx', 'xls'].includes(ext)) {
+        if (!ext || !['csv', 'xlsx'].includes(ext)) {
             setUploadState('error')
             setErrorMsg('Only .csv and .xlsx files are accepted')
             onIntensityChange?.(0)
@@ -183,12 +74,12 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
             form.append('file', file)
             form.append('country_code', 'AUTO')
 
-            const res = await fetch(`${API_BASE}/api/upload`, {
+            const res = await apiFetch('/api/upload', {
                 method: 'POST',
                 body: form,
             })
 
-            if (!res.ok) {
+            if (!res || !res.ok) {
                 const body = await res.text()
                 throw new Error(body || `Server error ${res.status}`)
             }
@@ -202,9 +93,9 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
                 router.push(`/workspace?job_id=${data.job_id}`)
             }, 900)
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             setUploadState('error')
-            setErrorMsg(err?.message ?? 'Unknown error')
+            setErrorMsg(err instanceof Error ? err.message : 'Unknown error')
             onIntensityChange?.(0)
         }
     }, [onIntensityChange, router])
@@ -317,7 +208,7 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
                         style={{ width: 24, height: 24, color: 'var(--signal)', position: 'relative', zIndex: 2 }}
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
                     >
-                        <g style={{ transformOrigin: '12px 12px', animation: 'portal-spin 1s linear infinite' }}>
+                        <g style={{ transformOrigin: '12px 12px', animation: `portal-spin ${cssDuration(1.6)}s linear infinite` }}>
                             <path
                                 d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
                                 strokeLinecap="round"
@@ -357,7 +248,10 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
                 ))}
             </div>
 
-            <div style={{
+            <div
+                aria-live="polite"
+                aria-atomic="true"
+                style={{
                 marginTop: 10,
                 fontFamily: "'IBM Plex Mono', monospace",
                 fontSize: 11.5,
@@ -389,7 +283,7 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
                             flexShrink: 0, display: 'inline-block',
                         }}
                         animate={{ opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        transition={{ duration: motionDuration(2), repeat: Infinity, ease: 'easeInOut' }}
                     />
                     Rule Engine Active
                 </span>
@@ -406,6 +300,12 @@ export default function UploadPortal({ onIntensityChange, rulesCount = 0 }: Uplo
 
             <style>{`
                 @keyframes portal-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                @keyframes pulse-ring-cycle {
+                    0%   { transform: translate(-50%, -50%) scale(0.7); opacity: 0; box-shadow: 0 0 0px rgba(var(--pulse-glow-r), var(--pulse-glow-g), var(--pulse-glow-b), 0); }
+                    14%  { opacity: 0.55; box-shadow: 0 0 14px rgba(var(--pulse-glow-r), var(--pulse-glow-g), var(--pulse-glow-b), 0.22); }
+                    55%  { transform: translate(-50%, -50%) scale(1.8); opacity: 0.35; box-shadow: 0 0 10px rgba(var(--pulse-glow-r), var(--pulse-glow-g), var(--pulse-glow-b), 0.18); }
+                    100% { transform: translate(-50%, -50%) scale(0.05); opacity: 0; box-shadow: 0 0 0px rgba(var(--pulse-glow-r), var(--pulse-glow-g), var(--pulse-glow-b), 0); }
+                }
             `}</style>
         </div>
     )

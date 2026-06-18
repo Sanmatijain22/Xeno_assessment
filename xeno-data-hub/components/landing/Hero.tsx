@@ -2,11 +2,13 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import ValidationCore from './ValidationCore'
-import UploadPortal from './UploadPortal'
+import { apiFetch } from '@/lib/api'
+import { EASE_OUT, motionDuration, cssDuration } from '@/lib/motion'
 
-const DEMO_EMAIL = 'sanmatijain2204@gmail.com'
+const ValidationCore = dynamic(() => import('./ValidationCore'), { ssr: false })
+const UploadPortal = dynamic(() => import('./UploadPortal'), { ssr: false })
 
 /** Smooth-scrolls to the upload portal and focuses the dropzone */
 export function scrollToUpload() {
@@ -19,7 +21,11 @@ export function scrollToUpload() {
 
 interface HeroProps {
     rulesCount?: number
-    jobs?: any[]
+    jobs?: Array<{
+        status: string
+        total_records?: number | null
+        valid_records?: number | null
+    }>
 }
 
 export default function Hero({ rulesCount = 0, jobs = [] }: HeroProps) {
@@ -44,9 +50,9 @@ export default function Hero({ rulesCount = 0, jobs = [] }: HeroProps) {
 
     const badges = [
         { value: formattedRecords, label: 'records processed', pos: { top: '-5%', left: '-18%' }, delay: 0 },
-        { value: formattedAccuracy, label: 'accuracy', pos: { top: '2%', right: '-22%' }, delay: 1.4 },
-        { value: rulesCount > 0 ? `${rulesCount}` : '190+', label: 'country rules', pos: { bottom: '12%', left: '-26%' }, delay: 2.8 },
-        { value: jobs.length > 0 ? `${activeJobs}` : '32', label: 'active jobs', pos: { bottom: '-10%', right: '-12%' }, delay: 0.7 },
+        { value: formattedAccuracy, label: 'accuracy', pos: { top: '2%', right: '-22%' }, delay: 2.1 },
+        { value: rulesCount > 0 ? `${rulesCount}` : '190+', label: 'country rules', pos: { bottom: '12%', left: '-26%' }, delay: 4.2 },
+        { value: jobs.length > 0 ? `${activeJobs}` : '32', label: 'active jobs', pos: { bottom: '-10%', right: '-12%' }, delay: 1.05 },
     ]
 
     const handleStartValidating = useCallback((e: React.MouseEvent) => {
@@ -98,7 +104,7 @@ export default function Hero({ rulesCount = 0, jobs = [] }: HeroProps) {
                 <motion.div
                     initial={{ opacity: 0, y: 32 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: motionDuration(0.8), ease: EASE_OUT }}
                     style={{ maxWidth: 680 }}
                 >
                     {/* Eyebrow */}
@@ -126,7 +132,7 @@ export default function Hero({ rulesCount = 0, jobs = [] }: HeroProps) {
                                 borderRadius: '50%',
                                 background: 'var(--signal)',
                                 boxShadow: '0 0 8px var(--signal)',
-                                animation: 'pulse 2.4s infinite',
+                                animation: `pulse ${cssDuration(2.4)}s infinite`,
                                 display: 'inline-block',
                             }}
                         />
@@ -242,7 +248,7 @@ export default function Hero({ rulesCount = 0, jobs = [] }: HeroProps) {
                         {[
                             ['Streaming', 'ingestion engine'],
                             ['6-stage', 'validation pipeline'],
-                            ['Gemini', '-powered insights'],
+                            ['Groq', '-powered insights'],
                         ].map(([bold, rest]) => (
                             <div key={bold}>
                                 <b style={{ color: 'var(--paper)', fontWeight: 500 }}>{bold}</b>
@@ -256,7 +262,7 @@ export default function Hero({ rulesCount = 0, jobs = [] }: HeroProps) {
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: motionDuration(0.9), delay: motionDuration(0.2), ease: EASE_OUT }}
                     style={{
                         position: 'relative',
                         minHeight: 380,
@@ -283,7 +289,7 @@ export default function Hero({ rulesCount = 0, jobs = [] }: HeroProps) {
                                 className="hero-badge"
                                 animate={{ y: [0, -9, 0] }}
                                 transition={{
-                                    duration: 6,
+                                    duration: motionDuration(6),
                                     repeat: Infinity,
                                     ease: 'easeInOut',
                                     delay: badge.delay,

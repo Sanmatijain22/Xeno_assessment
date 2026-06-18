@@ -1,3 +1,8 @@
+# ── Environment ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
 # ── Python / Backend ─────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
@@ -8,26 +13,69 @@ __pycache__/
 dist/
 build/
 *.egg
-.env
-.env.*
-!.env.example
 *.sqlite3
+*.db
+*.sqlite
+*.log
+tmp/
+temp/
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Uploads & generated outputs (large binary data)
+# Uploads & generated outputs
+uploads/
+storage/
+reports/
+chunks/
+output/
+backend/uploads/
+backend/outputs/
 backend/uploads/*.csv
 backend/uploads/*.xlsx
 backend/outputs/
 
-# Alembic versions cache
+# Generated datasets and test files
+backend/**/TEST-*/
+backend/**/TXN-*/
+backend/**/VERIFY-*/
+
+# Alembic cache
 backend/alembic/__pycache__/
 backend/alembic/versions/__pycache__/
 
-# ── Node / Frontend ───────────────────────────────────────────────────
+# ── Node ─────────────────────────────────────────────────────────────
+/node_modules/
+
+# ── Frontend (xeno-data-hub) ─────────────────────────────────────────
+xeno-data-hub/node_modules/
+xeno-data-hub/.next/
+xeno-data-hub/out/
+xeno-data-hub/build/
+xeno-data-hub/.env*
+!xeno-data-hub/.env.example
+xeno-data-hub/*.tsbuildinfo
+xeno-data-hub/next-env.d.ts
+xeno-data-hub/.vercel
+xeno-data-hub/coverage/
+xeno-data-hub/turbo/
+
+# Logs and temporary files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Production build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Legacy frontend path (if present)
 frontend/node_modules/
 frontend/.next/
 frontend/out/
@@ -40,8 +88,34 @@ frontend/.vercel
 frontend/coverage/
 
 # ── Docker ────────────────────────────────────────────────────────────
-*.log
+docker-compose.override.yml
+
+# ── IDE ────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
 
 # ── OS ────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# ── Testing ────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# ── Misc ───────────────────────────────────────────────────────────────
+*.pid
+*.seed
+*.pid.lock
+.cache/
+.npm/
+.eslintcache

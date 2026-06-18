@@ -1,16 +1,20 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, memo } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import Navbar from '@/components/shared/Navbar'
 import Hero from '@/components/landing/Hero'
-import Pipeline from '@/components/landing/Pipeline'
-import Architecture from '@/components/landing/Architecture'
-import RuleEngine from '@/components/landing/RuleEngine'
-import Insights from '@/components/landing/Insights'
-import Metrics from '@/components/landing/Metrics'
-import CTA from '@/components/landing/CTA'
-import CustomCursor from '@/components/shared/CustomCursor'
+import { apiFetch } from '@/lib/api'
+import { EASE_OUT, motionDuration } from '@/lib/motion'
+
+const Pipeline = dynamic(() => import('@/components/landing/Pipeline'))
+const Architecture = dynamic(() => import('@/components/landing/Architecture'))
+const RuleEngine = dynamic(() => import('@/components/landing/RuleEngine'))
+const Insights = dynamic(() => import('@/components/landing/Insights'))
+const Metrics = dynamic(() => import('@/components/landing/Metrics'))
+const CTA = dynamic(() => import('@/components/landing/CTA'))
+const CustomCursor = dynamic(() => import('@/components/shared/CustomCursor'), { ssr: false })
 
 /* ─── Problem Statement ─── */
 const PROBLEM_ITEMS = [
@@ -79,54 +83,26 @@ const INDUSTRY_CARDS: {
    ───────────────────────────────────────── */
 function SpotlightLabel({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLSpanElement>(null)
+  const glowRef = useRef<HTMLSpanElement>(null)
   const [hovered, setHovered] = useState(false)
-  const [pos, setPos] = useState({ x: 0, y: 0 })
-  const targetPos = useRef({ x: 0, y: 0 })
-  const animPos = useRef({ x: 0, y: 0 })
-  const rafRef = useRef<number | null>(null)
-
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-
-  const tick = useCallback(() => {
-    animPos.current.x = lerp(animPos.current.x, targetPos.current.x, 0.14)
-    animPos.current.y = lerp(animPos.current.y, targetPos.current.y, 0.14)
-    setPos({ x: animPos.current.x, y: animPos.current.y })
-    rafRef.current = requestAnimationFrame(tick)
-  }, [])
 
   const onMove = (e: React.MouseEvent<HTMLSpanElement>) => {
-    if (!ref.current) return
+    if (!ref.current || !glowRef.current) return
     const rect = ref.current.getBoundingClientRect()
-    targetPos.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    glowRef.current.style.background = `radial-gradient(ellipse 100px 70px at ${e.clientX - rect.left}px ${e.clientY - rect.top}px, rgba(76,141,255,0.20) 0%, rgba(155,107,255,0.11) 55%, transparent 80%)`
   }
-
-  const onEnter = () => {
-    setHovered(true)
-    rafRef.current = requestAnimationFrame(tick)
-  }
-
-  const onLeave = () => {
-    setHovered(false)
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-  }
-
-  // Cancel RAF on unmount
-  useEffect(() => {
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    }
-  }, [])
 
   return (
     <span
       ref={ref}
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onMouseMove={onMove}
       style={{ position: 'relative', display: 'inline', color: 'var(--paper)', fontWeight: 600 }}
     >
       {children}
       <span
+        ref={glowRef}
         aria-hidden
         style={{
           position: 'absolute',
@@ -135,7 +111,6 @@ function SpotlightLabel({ children }: { children: React.ReactNode }) {
           pointerEvents: 'none',
           opacity: hovered ? 1 : 0,
           transition: 'opacity 0.3s ease',
-          background: `radial-gradient(ellipse 100px 70px at ${pos.x}px ${pos.y}px, rgba(76,141,255,0.20) 0%, rgba(155,107,255,0.11) 55%, transparent 80%)`,
           willChange: 'background',
         }}
       />
@@ -180,8 +155,8 @@ function ScanRow({
             key="scan"
             initial={{ scaleX: 0, originX: 0 }}
             animate={{ scaleX: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            transition={{ duration: 0.82, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, transition: { duration: motionDuration(0.25) } }}
+            transition={{ duration: motionDuration(0.82), ease: EASE_OUT }}
             style={{
               position: 'absolute',
               top: 0,
@@ -205,8 +180,8 @@ function ScanRow({
             key="line"
             initial={{ scaleX: 0, originX: 0 }}
             animate={{ scaleX: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.2 } }}
-            transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, transition: { duration: motionDuration(0.2) } }}
+            transition={{ duration: motionDuration(0.75), ease: EASE_OUT }}
             style={{
               position: 'absolute',
               top: 0,
@@ -252,7 +227,7 @@ function ScanRow({
 /* ─────────────────────────────────────────
    IndustryCard  — glassmorphism + preview
    ───────────────────────────────────────── */
-function IndustryCard({ card }: { card: (typeof INDUSTRY_CARDS)[number] }) {
+const IndustryCard = memo(function IndustryCard({ card }: { card: (typeof INDUSTRY_CARDS)[number] }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -260,7 +235,7 @@ function IndustryCard({ card }: { card: (typeof INDUSTRY_CARDS)[number] }) {
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       whileHover={{ y: -6 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+      transition={{ type: 'spring', stiffness: 180, damping: 26 }}
       style={{
         position: 'relative',
         padding: '18px 22px',
@@ -300,7 +275,7 @@ function IndustryCard({ card }: { card: (typeof INDUSTRY_CARDS)[number] }) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+            transition={{ duration: motionDuration(0.22), ease: 'easeOut' }}
             style={{
               position: 'absolute',
               top: 'calc(100% + 10px)',
@@ -335,7 +310,7 @@ function IndustryCard({ card }: { card: (typeof INDUSTRY_CARDS)[number] }) {
                 key={item}
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.065, duration: 0.2, ease: 'easeOut' }}
+                transition={{ delay: i * 0.1, duration: motionDuration(0.2), ease: 'easeOut' }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -369,7 +344,7 @@ function IndustryCard({ card }: { card: (typeof INDUSTRY_CARDS)[number] }) {
       </AnimatePresence>
     </motion.div>
   )
-}
+})
 
 /* ─────────────────────────────────────────
    ProblemSection
@@ -540,7 +515,7 @@ function Footer() {
           {['Privacy', 'Terms', 'Status', 'Docs'].map((link) => (
             <a
               key={link}
-              href="#"
+              href={link === 'Docs' ? '/workspace?demo=true' : `mailto:sanmatijain2204@gmail.com?subject=Xeno%20${link}`}
               style={{ transition: 'color 0.2s' }}
               onMouseEnter={(e) =>
                 ((e.target as HTMLElement).style.color = 'var(--mist)')
@@ -558,94 +533,81 @@ function Footer() {
   )
 }
 
+interface JobListItem {
+  job_id: string
+  status: string
+  total_records: number | null
+  valid_records: number | null
+  invalid_records?: number | null
+  processing_time_ms?: number | null
+}
+
+interface RuleItem {
+  id: string
+  is_active: boolean
+  [key: string]: unknown
+}
+
 export default function Page() {
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
   const [stats, setStats] = useState<{
     active_jobs: number
     country_rule_count: number
     processed_records: number
     avg_quality_score: number
   } | null>(null)
-  const [heroJobs, setHeroJobs] = useState<Array<{
-    status: string
-    total_records: number | null
-    valid_records: number | null
-  }>>([])
+  const [rules, setRules] = useState<RuleItem[]>([])
+  const [jobs, setJobs] = useState<JobListItem[]>([])
+  const [latestJobDetails, setLatestJobDetails] = useState<JobListItem | null>(null)
+  const [latestJobReport, setLatestJobReport] = useState<Record<string, unknown> | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${API_BASE}/api/stats`).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API_BASE}/api/jobs`).then(r => r.ok ? r.json() : null).catch(() => null),
-    ]).then(([s, j]) => {
-      if (s) setStats(s)
-      if (j) setHeroJobs(j)
-    })
-  }, [API_BASE])
+    let cancelled = false
 
-  const [rules, setRules] = useState<any[]>([])
-  const [jobs, setJobs] = useState<any[]>([])
-  const [latestJobDetails, setLatestJobDetails] = useState<any | null>(null)
-  const [latestJobReport, setLatestJobReport] = useState<any | null>(null)
+    async function bootstrap() {
+      const [statsRes, jobsRes, rulesRes] = await Promise.all([
+        apiFetch('/api/stats'),
+        apiFetch('/api/jobs'),
+        apiFetch('/api/rules'),
+      ])
 
-  const fetchRules = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/rules`)
-      if (res.ok) {
-        setRules(await res.json())
-      }
-    } catch (e) {
-      console.error('Failed to fetch rules', e)
-    }
-  }, [])
+      if (cancelled) return
 
-  const fetchJobs = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/jobs`)
-      if (res.ok) {
-        const jobsData = await res.json()
+      if (statsRes?.ok) setStats(await statsRes.json())
+      if (rulesRes?.ok) setRules(await rulesRes.json())
+
+      if (jobsRes?.ok) {
+        const jobsData = await jobsRes.json()
         setJobs(jobsData)
-        
-        // Find latest completed job
-        const completed = jobsData.find((j: any) => j.status === 'completed')
+
+        const completed = jobsData.find((j: JobListItem) => j.status === 'completed')
         if (completed) {
           const [detailsRes, reportRes] = await Promise.all([
-            fetch(`${API_BASE}/api/jobs/${completed.job_id}`),
-            fetch(`${API_BASE}/api/jobs/${completed.job_id}/report`)
+            apiFetch(`/api/jobs/${completed.job_id}`),
+            apiFetch(`/api/jobs/${completed.job_id}/report`),
           ])
-          if (detailsRes.ok) {
-            setLatestJobDetails(await detailsRes.json())
-          }
-          if (reportRes.ok) {
-            setLatestJobReport(await reportRes.json())
-          }
+          if (cancelled) return
+          if (detailsRes?.ok) setLatestJobDetails(await detailsRes.json())
+          if (reportRes?.ok) setLatestJobReport(await reportRes.json())
         }
       }
-    } catch (e) {
-      console.error('Failed to fetch jobs', e)
     }
+
+    bootstrap()
+    return () => { cancelled = true }
   }, [])
 
   const toggleRule = useCallback(async (ruleId: string, is_active: boolean) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/rules/${ruleId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active }),
-      })
-      if (res.ok) {
-        setRules((prev) =>
-          prev.map((r) => (r.id === ruleId ? { ...r, is_active } : r))
-        )
-      }
-    } catch (e) {
-      console.error('Failed to toggle rule', e)
+    const res = await apiFetch(`/api/rules/${ruleId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active }),
+    })
+    if (res?.ok) {
+      setRules((prev) =>
+        prev.map((r) => (r.id === ruleId ? { ...r, is_active } : r))
+      )
     }
   }, [])
-
-  useEffect(() => {
-    fetchRules()
-    fetchJobs()
-  }, [fetchRules, fetchJobs])
 
   /* Mouse spotlight */
   useEffect(() => {
@@ -687,7 +649,7 @@ export default function Page() {
       <main>
         <Hero
           rulesCount={stats?.country_rule_count ?? 0}
-          jobs={heroJobs}
+          jobs={jobs}
         />
         <ProblemSection />
         <Pipeline />

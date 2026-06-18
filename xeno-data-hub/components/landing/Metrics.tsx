@@ -1,25 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { cssDurationMs } from '@/lib/motion'
 import { useInView } from 'framer-motion'
 
-const SUB_METRICS = [
-    {
-        value: '2.1M rows/min',
-        label: 'sustained streaming throughput on a single worker pool',
-    },
-    {
-        value: '<400ms',
-        label: 'p95 validation latency per chunk, end to end',
-    },
-    {
-        value: '40M+',
-        label: 'transactions validated for customers last quarter',
-    },
-]
+interface JobMetric {
+    status: string
+    total_records?: number | null
+    valid_records?: number | null
+    processing_time_ms?: number | null
+}
 
 interface MetricsProps {
-    jobs?: any[]
+    jobs?: JobMetric[]
 }
 
 export default function Metrics({ jobs = [] }: MetricsProps) {
@@ -80,14 +73,17 @@ export default function Metrics({ jobs = [] }: MetricsProps) {
     ]
 
     const accuracyRef = useRef(accuracy)
-    accuracyRef.current = accuracy
+
+    useEffect(() => {
+        accuracyRef.current = accuracy
+    }, [accuracy])
 
     useEffect(() => {
         if (!isInView || animStarted.current) return
         animStarted.current = true
         const target = accuracyRef.current
         const start = performance.now()
-        const duration = 1400
+        const duration = cssDurationMs(2300)
         const tick = (now: number) => {
             const t = Math.min(1, (now - start) / duration)
             const eased = 1 - Math.pow(1 - t, 3)

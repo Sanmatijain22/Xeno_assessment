@@ -33,7 +33,7 @@ class JobsRepository(BaseRepository[ProcessingJobs]):
         return res.scalars().all()
 
     async def save_ai_report(self, report: AIReports) -> AIReports:
-        """Saves Gemini output model attributes into DB."""
+        """Saves Groq output model attributes into DB."""
         self.session.add(report)
         await self.session.flush()
         return report

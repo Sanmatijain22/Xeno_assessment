@@ -1,0 +1,192 @@
+# Environment Variables Reference
+
+This document describes all environment variables used across the Xeno Data Intelligence Hub project.
+
+---
+
+## Backend API (Render Web Service)
+
+### System Configuration
+
+| Variable | Description | Example | Deployment Target |
+|----------|-------------|---------|-------------------|
+| `ENV` | Environment mode (development/production) | `production` | Render |
+| `DEBUG` | Enable debug mode (true/false) | `false` | Render |
+| `SECRET_KEY` | Secret key for session signing | `your-secure-secret-key` | Render (auto-generated) |
+
+### Database Configuration
+
+| Variable | Description | Example | Deployment Target |
+|----------|-------------|---------|-------------------|
+| `DB_USER` | PostgreSQL username | `postgres` | Render |
+| `DB_PASSWORD` | PostgreSQL password | `your-db-password` | Render |
+| `DB_HOST` | PostgreSQL host | `your-db.render.com` | Render |
+| `DB_PORT` | PostgreSQL port | `5432` | Render |
+| `DB_NAME` | Database name | `xeno` | Render |
+| `DB_ECHO` | Enable SQLAlchemy query logging | `false` | Render |
+| `DB_POOL_SIZE` | SQLAlchemy connection pool size | `5` | Render |
+| `DB_MAX_OVERFLOW` | SQLAlchemy max overflow connections | `10` | Render |
+| `DB_POOL_TIMEOUT` | SQLAlchemy pool timeout in seconds | `30` | Render |
+
+### Queue Configuration
+
+| Variable | Description | Example | Deployment Target |
+|----------|-------------|---------|-------------------|
+| `REDIS_URL` | Redis connection URL | `redis://your-redis.render.com:6379/0` | Render |
+
+### AI Services
+
+| Variable | Description | Example | Deployment Target |
+|----------|-------------|---------|-------------------|
+| `GROQ_API_KEY` | Groq API key for AI services | `gsk_...` | Render |
+
+### Storage Configuration
+
+| Variable | Description | Example | Deployment Target |
+|----------|-------------|---------|-------------------|
+| `UPLOAD_DIR` | Upload directory path | `./uploads` | Render |
+| `OUTPUT_DIR` | Output directory path | `./outputs` | Render |
+| `MAX_UPLOAD_BYTES` | Maximum upload size in bytes | `52428800` (50MB) | Render |
+
+---
+
+## Background Worker (Railway)
+
+The worker uses the same environment variables as the Backend API since it connects to the same database and Redis instance.
+
+### Required Variables
+
+| Variable | Description | Example | Deployment Target |
+|----------|-------------|---------|-------------------|
+| `ENV` | Environment mode | `production` | Railway |
+| `DEBUG` | Debug mode | `false` | Railway |
+| `DB_USER` | PostgreSQL username | `postgres` | Railway |
+| `DB_PASSWORD` | PostgreSQL password | `your-db-password` | Railway |
+| `DB_HOST` | PostgreSQL host | `your-db.render.com` | Railway |
+| `DB_PORT` | PostgreSQL port | `5432` | Railway |
+| `DB_NAME` | Database name | `xeno` | Railway |
+| `REDIS_URL` | Redis connection URL | `redis://your-redis.render.com:6379/0` | Railway |
+| `GROQ_API_KEY` | Groq API key | `gsk_...` | Railway |
+| `UPLOAD_DIR` | Upload directory path | `./uploads` | Railway |
+| `OUTPUT_DIR` | Output directory path | `./outputs` | Railway |
+
+---
+
+## Frontend (Vercel)
+
+### API Configuration
+
+| Variable | Description | Example | Deployment Target |
+|----------|-------------|---------|-------------------|
+| `NEXT_PUBLIC_API_URL` | Backend API URL for production | `https://xeno-api.onrender.com` | Vercel |
+
+**Note:** For local development, leave `NEXT_PUBLIC_API_URL` empty to use Next.js rewrites to `http://localhost:8000`.
+
+---
+
+## Redis Queue Configuration
+
+### Render Redis Settings
+
+- **Connection URL**: `redis://<redis-host>:6379/0`
+- **Default Queue**: `default`
+- **Retry Policy**: 3 retries with exponential backoff (60s, 120s, 240s)
+
+### Worker Connection
+
+The worker connects to Redis using:
+```python
+redis_conn = Redis.from_url(settings.REDIS_URL)
+worker = Worker([Queue("default", connection=redis_conn)], connection=redis_conn)
+```
+
+---
+
+## Database Migration Configuration
+
+### Alembic Configuration
+
+Database migrations use environment variables from `backend/.env.example`. The migration script (`backend/alembic/env.py`) builds the database URL from individual components to avoid password encoding issues.
+
+---
+
+## Security Notes
+
+1. **Never commit `.env` files** - Use `.env.example` templates only
+2. **Generate strong secrets** - Use Render's `generateValue: true` for `SECRET_KEY`
+3. **Rotate credentials regularly** - Especially for production deployments
+4. **Use Render's internal networking** - Database and Redis connections should use internal Render URLs when possible
+5. **Restrict API access** - Implement proper authentication and rate limiting in production
+
+---
+
+## Deployment-Specific Values
+
+### Render Web Service (Backend)
+
+```bash
+ENV=production
+DEBUG=false
+DB_USER=postgres
+DB_PASSWORD=<from-Render-Postgres>
+DB_HOST=<from-Render-Postgres>
+DB_PORT=5432
+DB_NAME=xeno
+REDIS_URL=redis://<from-Render-Redis>:6379/0
+GROQ_API_KEY=<from-Groq-console>
+SECRET_KEY=<auto-generated-by-Render>
+UPLOAD_DIR=./uploads
+OUTPUT_DIR=./outputs
+```
+
+### Railway Worker
+
+```bash
+ENV=production
+DEBUG=false
+DB_USER=postgres
+DB_PASSWORD=<same-as-Render>
+DB_HOST=<same-as-Render>
+DB_PORT=5432
+DB_NAME=xeno
+REDIS_URL=redis://<same-as-Render-Redis>:6379/0
+GROQ_API_KEY=<same-as-Render>
+UPLOAD_DIR=./uploads
+OUTPUT_DIR=./outputs
+```
+
+### Vercel Frontend
+
+```bash
+NEXT_PUBLIC_API_URL=https://<your-backend-service>.onrender.com
+```
+
+---
+
+## Development vs Production
+
+### Development (localhost)
+
+```bash
+# Backend
+ENV=development
+DEBUG=true
+DB_HOST=localhost
+REDIS_URL=redis://localhost:6379/0
+
+# Frontend
+NEXT_PUBLIC_API_URL=  # Empty for Next.js rewrites
+```
+
+### Production
+
+```bash
+# Backend
+ENV=production
+DEBUG=false
+DB_HOST=<render-host>
+REDIS_URL=redis://<render-host>:6379/0
+
+# Frontend
+NEXT_PUBLIC_API_URL=https://<backend>.onrender.com
+```

@@ -1,7 +1,7 @@
 import os
-import mimetypes
-import os
+import re
 import uuid
+import traceback
 from pathlib import Path
 from typing import Annotated, Any
 from litestar import Controller, post, get
@@ -28,6 +28,29 @@ from app.schemas.jobs import (
 from app.models.jobs import UploadedFiles, ProcessingJobs
 from app.repositories.jobs import JobsRepository
 from app.config.settings import settings
+
+JOB_ID_RE = re.compile(r"^TXN-[A-F0-9]{8}$")
+
+
+def _validate_job_id(job_id: str) -> str:
+    if not JOB_ID_RE.match(job_id):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+    return job_id
+
+
+def _validate_chunk_number(chunk_number: str) -> str:
+    if not chunk_number.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid chunk number")
+    return chunk_number
+
+
+def _safe_output_path(job_id: str, *parts: str) -> Path:
+    """Resolve a path under OUTPUT_DIR/job_id, rejecting traversal."""
+    base = (Path(settings.OUTPUT_DIR) / job_id).resolve()
+    target = (base / Path(*parts)).resolve()
+    if not str(target).startswith(str(base)):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    return target
 
 
 def _safe_file_size(path: Path) -> int:
@@ -73,7 +96,7 @@ class UploadController(Controller):
         # validation service will resolve per-row from the country column
         country_code = country_code.strip().upper() or "AUTO"
 
-        filename = file_item.filename or "upload"
+        filename = os.path.basename(file_item.filename or "upload")
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if ext not in ("csv", "xlsx"):
             raise HTTPException(status_code=400, detail="Only CSV and XLSX files are accepted")
@@ -111,12 +134,25 @@ class UploadController(Controller):
             await repo.create(job)
             await session.commit()
         except Exception as exc:
+            import logging
+            logger = logging.getLogger("xeno.api")
+            logger.error(
+                f"Database registration failed for job {job_id}:\n"
+                f"Error type: {type(exc).__name__}\n"
+                f"Error message: {str(exc)}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
-                except OSError:
-                    pass
-            raise HTTPException(status_code=500, detail=f"DB registration failed: {exc}")
+                except OSError as cleanup_exc:
+                    logger.error(
+                        f"Failed to cleanup file {file_path} after DB error:\n"
+                        f"Error type: {type(cleanup_exc).__name__}\n"
+                        f"Error message: {str(cleanup_exc)}\n"
+                        f"Traceback:\n{traceback.format_exc()}"
+                    )
+            raise HTTPException(status_code=500, detail=f"DB registration failed: {str(exc)}")
 
         try:
             redis_conn = Redis.from_url(settings.REDIS_URL)
@@ -128,7 +164,15 @@ class UploadController(Controller):
                 retry=Retry(max=3, interval=[60, 120, 240]),
             )
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to enqueue task: {exc}")
+            import logging
+            logger = logging.getLogger("xeno.api")
+            logger.error(
+                f"Failed to enqueue task for job {job_id}:\n"
+                f"Error type: {type(exc).__name__}\n"
+                f"Error message: {str(exc)}\n"
+                f"Traceback:\n{traceback.format_exc()}"
+            )
+            raise HTTPException(status_code=500, detail=f"Failed to enqueue task: {str(exc)}")
 
         return UploadResponse(job_id=job_id, status="queued")
 
@@ -151,6 +195,7 @@ class UploadController(Controller):
     # ── GET /api/jobs/{job_id} ────────────────────────────────────────────
     @get(path="/jobs/{job_id:str}")
     async def get_job_details(self, job_id: str, session: AsyncSession) -> JobDetailsResponse:
+        job_id = _validate_job_id(job_id)
         repo = JobsRepository(session)
         job  = await repo.get_by_id(job_id)
         if not job:
@@ -192,6 +237,7 @@ class UploadController(Controller):
     # ── GET /api/jobs/{job_id}/status ─────────────────────────────────────
     @get(path="/jobs/{job_id:str}/status")
     async def get_job_status(self, job_id: str, session: AsyncSession) -> JobStatusResponse:
+        job_id = _validate_job_id(job_id)
         repo = JobsRepository(session)
         job  = await repo.get_by_id(job_id)
         if not job:
@@ -201,6 +247,7 @@ class UploadController(Controller):
     # ── GET /api/jobs/{job_id}/report ─────────────────────────────────────
     @get(path="/jobs/{job_id:str}/report")
     async def get_job_ai_report(self, job_id: str, session: AsyncSession) -> AIReportResponse:
+        job_id = _validate_job_id(job_id)
         repo   = JobsRepository(session)
         report = await repo.get_ai_report(job_id)
         if not report:
@@ -216,6 +263,7 @@ class UploadController(Controller):
     # ── GET /api/jobs/{job_id}/validation-breakdown ───────────────────────
     @get(path="/jobs/{job_id:str}/validation-breakdown")
     async def get_validation_breakdown(self, job_id: str, session: AsyncSession) -> dict:
+        job_id = _validate_job_id(job_id)
         repo = JobsRepository(session)
         job  = await repo.get_by_id(job_id)
         if not job:
@@ -237,6 +285,7 @@ class UploadController(Controller):
     # ── GET /api/jobs/{job_id}/downloads ──────────────────────────────────
     @get(path="/jobs/{job_id:str}/downloads")
     async def get_job_downloads(self, job_id: str, session: AsyncSession) -> DownloadLinksResponse:
+        job_id = _validate_job_id(job_id)
         repo = JobsRepository(session)
         job  = await repo.get_by_id(job_id)
         if not job:
@@ -282,7 +331,8 @@ class UploadController(Controller):
     @get(path="/downloads/{job_id:str}/clean")
     async def download_clean(self, job_id: str) -> Response:
         """Serve the clean validated CSV for download."""
-        path = Path(settings.OUTPUT_DIR) / job_id / "clean_transactions.csv"
+        job_id = _validate_job_id(job_id)
+        path = _safe_output_path(job_id, "clean_transactions.csv")
         if not path.exists():
             raise HTTPException(status_code=404, detail="Clean file not found")
         return Response(
@@ -295,7 +345,8 @@ class UploadController(Controller):
     @get(path="/downloads/{job_id:str}/errors")
     async def download_errors(self, job_id: str) -> Response:
         """Serve the error report CSV for download."""
-        path = Path(settings.OUTPUT_DIR) / job_id / "error_report.csv"
+        job_id = _validate_job_id(job_id)
+        path = _safe_output_path(job_id, "error_report.csv")
         if not path.exists():
             raise HTTPException(status_code=404, detail="Error report not found")
         return Response(
@@ -308,7 +359,9 @@ class UploadController(Controller):
     @get(path="/downloads/{job_id:str}/chunk/{chunk_number:str}")
     async def download_chunk(self, job_id: str, chunk_number: str) -> Response:
         """Serve a specific output chunk CSV for download."""
-        path = Path(settings.OUTPUT_DIR) / job_id / f"chunk_{chunk_number}.csv"
+        job_id = _validate_job_id(job_id)
+        chunk_number = _validate_chunk_number(chunk_number)
+        path = _safe_output_path(job_id, f"chunk_{chunk_number}.csv")
         if not path.exists():
             raise HTTPException(status_code=404, detail=f"Chunk {chunk_number} not found")
         return Response(

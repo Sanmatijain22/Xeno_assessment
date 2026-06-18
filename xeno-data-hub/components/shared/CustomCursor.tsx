@@ -6,62 +6,46 @@ export default function CustomCursor() {
     const dotRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        // Only show on non-touch devices
         if (window.matchMedia('(hover: none)').matches) return
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
         const dot = dotRef.current
         if (!dot) return
 
-        let mx = -100, my = -100
-        let rafId: number
+        let mx = -100
+        let my = -100
         let isHovering = false
+
+        const updateTransform = () => {
+            dot.style.left = `${mx}px`
+            dot.style.top = `${my}px`
+            dot.style.transform = `translate(-50%, -50%) scale(${isHovering ? 2.0 : 1})`
+            dot.style.opacity = isHovering ? '0.85' : '1'
+        }
 
         const onMove = (e: MouseEvent) => {
             mx = e.clientX
             my = e.clientY
+            updateTransform()
         }
 
-        const onEnter = () => {
-            isHovering = true
-        }
-        const onLeave = () => {
-            isHovering = false
-        }
-
-        // Attach to all interactive elements
-        const attachHoverListeners = () => {
-            const targets = document.querySelectorAll('a, button, [role="button"], input, [data-cursor-hover]')
-            targets.forEach(el => {
-                el.addEventListener('mouseenter', onEnter)
-                el.addEventListener('mouseleave', onLeave)
-            })
+        const onOver = (e: MouseEvent) => {
+            const target = (e.target as Element).closest(
+                'a, button, [role="button"], input, [data-cursor-hover]'
+            )
+            const next = !!target
+            if (next !== isHovering) {
+                isHovering = next
+                updateTransform()
+            }
         }
 
-        window.addEventListener('mousemove', onMove)
-        attachHoverListeners()
-
-        // Observe DOM changes to catch dynamically added elements
-        const observer = new MutationObserver(attachHoverListeners)
-        observer.observe(document.body, { childList: true, subtree: true })
-
-        const tick = () => {
-            // Dot snaps instantly
-            dot.style.left = `${mx}px`
-            dot.style.top = `${my}px`
-
-            // Scale dot on hover
-            dot.style.transform = `translate(-50%, -50%) scale(${isHovering ? 2.0 : 1})`
-            dot.style.opacity = isHovering ? '0.85' : '1'
-
-            rafId = requestAnimationFrame(tick)
-        }
-
-        tick()
+        window.addEventListener('mousemove', onMove, { passive: true })
+        document.body.addEventListener('mouseover', onOver, { passive: true })
 
         return () => {
-            cancelAnimationFrame(rafId)
             window.removeEventListener('mousemove', onMove)
-            observer.disconnect()
+            document.body.removeEventListener('mouseover', onOver)
         }
     }, [])
 
