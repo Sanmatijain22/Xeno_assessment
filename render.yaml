@@ -54,8 +54,9 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
-    dockerCommand: python -m rq.cli worker --url $REDIS_URL default
     envVars:
+      - key: RQ_WORKER
+        value: true
       - key: ENV
         value: production
       - key: DB_USER
@@ -82,6 +83,8 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      - key: SECRET_KEY
+        generateValue: true
       - key: UPLOAD_DIR
         value: ./uploads
       - key: OUTPUT_DIR

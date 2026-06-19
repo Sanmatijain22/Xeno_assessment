@@ -20,11 +20,8 @@ connect_args={"timeout": 10}  # asyncpg uses 'timeout' not 'connect_timeout'
 
 **backend/alembic/env.py (line 51):**
 ```python
-# Before:
-connect_args={"connect_timeout": 10}
-
-# After:
-connect_args={"timeout": 10}  # asyncpg uses 'timeout'
+# Note: Alembic uses synchronous psycopg2, which uses 'connect_timeout'
+connect_args={"connect_timeout": 10}  # psycopg2 uses 'connect_timeout'
 ```
 
 ### 2. Upload Endpoint 500 Error
@@ -41,6 +38,22 @@ redis_conn = Redis.from_url(settings.REDIS_URL)
 
 # After:
 redis_conn = Redis.from_url(settings.REDIS_URL, socket_timeout=5, socket_connect_timeout=5)
+```
+
+### 3. Port Binding Issue (Render Deployment)
+**Error:** "Port scan timeout reached, no open ports detected"
+
+**Root Cause:** Dockerfile was using `python main.py` instead of `uvicorn main:app`, which may not properly bind to the port in all environments.
+
+**File Modified:**
+
+**backend/Dockerfile (line 37):**
+```dockerfile
+# Before:
+CMD sh -c "if [ \"$RQ_WORKER\" = \"true\" ]; then python start_worker.py; else alembic upgrade head && python main.py; fi"
+
+# After:
+CMD sh -c "if [ \"$RQ_WORKER\" = \"true\" ]; then python start_worker.py; else alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000; fi"
 ```
 
 ## Stack Information
@@ -60,6 +73,7 @@ The upload endpoint does not directly produce chunk_1.csv, clean_transactions.cs
 1. Test database connection - should no longer throw TypeError
 2. Test POST /api/upload - should return 200 with job_id instead of 500
 3. Verify background task produces expected output files (chunk_1.csv, clean_transactions.csv, error_report.csv)
+4. Verify Render deployment binds to port 8000 successfully after migration
 
 ## Note on Business Logic
-No business logic was changed. Only connection timeout parameters were corrected to match asyncpg's expected parameter names, and socket timeouts were added to Redis connection to prevent indefinite hangs.
+No business logic was changed. Only connection timeout parameters were corrected to match asyncpg's expected parameter names, socket timeouts were added to Redis connection to prevent indefinite hangs, and Dockerfile startup command was updated to use uvicorn directly for reliable port binding.

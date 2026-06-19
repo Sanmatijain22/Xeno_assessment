@@ -48,7 +48,7 @@ def run_migrations_online() -> None:
     connectable = create_engine(
         DB_URL,
         poolclass=pool.NullPool,
-        connect_args={"timeout": 10}  # Fail fast if DB is unreachable (asyncpg uses 'timeout')
+        connect_args={"connect_timeout": 10}  # Fail fast if DB is unreachable (psycopg2 uses 'connect_timeout')
     )
     with connectable.connect() as connection:
         # Set lock_timeout and statement_timeout to fail fast on hangs instead of waiting indefinitely

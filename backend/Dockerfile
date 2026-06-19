@@ -27,11 +27,11 @@ ENV PATH=/root/.local/bin:$PATH
 COPY . .
 
 # Make startup scripts executable
-RUN chmod +x start_worker.py start_railway.py 2>/dev/null || true
+RUN chmod +x start_worker.py 2>/dev/null || true
 
 # Expose Litestar default port
 EXPOSE 8000
 
-# Default: Run database migrations and then start the API
-# Can be overridden for Railway worker service using CMD or start command
-CMD sh -c "alembic upgrade head && python main.py"
+# Check if this is a worker deployment by checking for RQ_WORKER environment variable
+# If set, run the worker; otherwise run the API with migrations
+CMD sh -c "if [ \"$RQ_WORKER\" = \"true\" ]; then python start_worker.py; else alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000; fi"
