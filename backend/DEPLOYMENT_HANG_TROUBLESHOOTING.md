@@ -1,11 +1,17 @@
 # Render Deployment Hang Troubleshooting Guide
 
 ## Problem
-Render deploy is hanging indefinitely during Alembic migration step. Deploy log stops after:
+Render deploy hangs for 14+ minutes during Alembic migration step, then fails with misleading "no open ports detected" error.
+
+**Confirmed Timeline:**
 ```
-INFO [alembic.runtime.migration] Context impl PostgresqlImpl.
-INFO [alembic.runtime.migration] Will assume transactional DDL.
+09:21:03 AM  INFO [alembic.runtime.migration] Context impl PostgresqlImpl.
+09:21:03 AM  INFO [alembic.runtime.migration] Will assume transactional DDL.
+[... 14 minute total silence, no further alembic output, no errors ...]
+09:35:53 AM  ==> Port scan timeout reached, no open ports detected...
 ```
+
+**Interpretation:** The "no open ports detected" message is a RED HERRING. The app never binds a port because the process never gets past `alembic upgrade head` — it is fully hung for the entire 14 minutes until Render's deploy timeout kills it.
 
 ## Root Cause Analysis
 
@@ -16,6 +22,7 @@ Alembic takes a Postgres advisory lock before running `upgrade head` to prevent 
 - DB connection hanging (not failing)
 - Missing merge migration in deployed code
 - Network connectivity issues
+- Supabase pooler mode misconfiguration (transaction pooler doesn't support advisory locks)
 
 ## Investigation Steps
 
@@ -39,7 +46,7 @@ SELECT pg_terminate_backend(<pid>);
 ### Step 2: Check for Long-Running/Idle Sessions
 ```sql
 -- Check for long-running or idle-in-transaction sessions
-SELECT pid, state, query, query_start, state_change
+SELECT pid, state, query, query_start, state_change, wait_event_type, wait_event
 FROM pg_stat_activity
 WHERE state != 'idle'
 ORDER BY query_start ASC;
@@ -69,7 +76,9 @@ If multiple heads are shown, the merge migration is missing from the deployed co
 
 ### Step 4: Check DB Connection Configuration
 Verify the DATABASE_URL is correct:
-- Using correct pooler mode (Supabase requires "Transaction" pooler port 6543 OR direct connection port 5432)
+- **Current Configuration:** Using port 5432 (direct PostgreSQL connection)
+- **Supabase Note:** Transaction pooler (port 6543) does NOT support advisory locks
+- **Recommendation:** Use direct connection (port 5432) or Session pooler for migrations
 - SSL mode is set correctly if required
 - Connection is reachable from Render's network
 
@@ -88,6 +97,9 @@ def run_migrations_online() -> None:
         connect_args={"connect_timeout": 10}  # Fail fast if DB is unreachable
     )
     with connectable.connect() as connection:
+        # Set lock_timeout and statement_timeout to fail fast on hangs instead of waiting indefinitely
+        connection.execute(text("SET lock_timeout = '15s'"))
+        connection.execute(text("SET statement_timeout = '60s'"))
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
@@ -97,12 +109,20 @@ def run_migrations_online() -> None:
             context.run_migrations()
 ```
 
-**Impact:** Connection issues will now fail fast with a clear error instead of hanging indefinitely.
+**Impact:**
+- Connection issues will now fail fast with a clear error instead of hanging indefinitely
+- Lock acquisition will timeout after 15 seconds instead of waiting forever
+- Statement execution will timeout after 60 seconds instead of waiting forever
 
 ### Fix 2: Verified Merge Migration is Present
 **Result:** Single head confirmed: `5d31b052e9b5`
 
 **Impact:** The multiple-heads fix is present in the codebase.
+
+### Fix 3: Confirmed DB Connection Mode
+**Result:** Using port 5432 (direct PostgreSQL connection)
+
+**Impact:** Correct configuration for Alembic migrations (supports advisory locks). Not using transaction pooler which would cause hangs.
 
 ## Resolution Steps
 
@@ -113,7 +133,7 @@ def run_migrations_online() -> None:
 
 ### If No Stale Lock is Found
 1. Check DB connection string in Render environment variables
-2. Verify Supabase pooler mode is correct
+2. Verify Supabase pooler mode is correct (use direct connection for migrations)
 3. Check network connectivity from Render to DB
 4. Re-trigger deploy with timeout fix in place
 5. Should now fail fast with clear error if connection issue
@@ -126,25 +146,29 @@ def run_migrations_online() -> None:
 ## Expected Behavior After Fix
 
 **Before Fix:**
-- Deploy hangs indefinitely during migration step
+- Deploy hangs indefinitely during migration step (14+ minutes)
 - No error message
+- Fails with misleading "no open ports detected" error
 - "Waiting for internal health check" banner remains active
 
 **After Fix:**
 - Deploy either completes successfully within 30 seconds
-- OR fails fast with clear error message (connection timeout, lock conflict, etc.)
+- OR fails fast with clear error message (connection timeout, lock timeout, statement timeout, etc.)
 - No indefinite hanging
+- Clear error messages for debugging
 
 ## Monitoring
 
 After applying fixes, monitor:
 1. Deploy log should show migration completion or clear error
 2. Migration should complete within 30 seconds for typical migrations
-3. No "Waiting for internal health check" hanging
+3. Lock timeout should trigger after 15 seconds if stale lock exists
+4. Statement timeout should trigger after 60 seconds if query hangs
+5. No "Waiting for internal health check" hanging
 
 ## Files Modified
 
-1. `backend/alembic/env.py` - Added connect_timeout to prevent indefinite hangs
+1. `backend/alembic/env.py` - Added connect_timeout, lock_timeout, and statement_timeout to prevent indefinite hangs
 
 ## Verification
 
@@ -155,8 +179,8 @@ Run these commands to verify the fix:
 cd backend
 alembic heads
 
-# Verify timeout is in env.py
-grep -n "connect_timeout" alembic/env.py
+# Verify timeouts are in env.py
+grep -n "connect_timeout\|lock_timeout\|statement_timeout" alembic/env.py
 ```
 
 ## Next Steps
@@ -166,3 +190,7 @@ grep -n "connect_timeout" alembic/env.py
 3. Re-trigger Render deploy
 4. Monitor deploy log for completion or clear error
 5. Report results
+
+## DO NOT Change Port-Binding Configuration
+
+The "no open ports detected" error is a symptom of the migration hang, not a separate bug. Changing PORT env var or host binding will not fix the underlying issue.

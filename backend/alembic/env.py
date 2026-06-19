@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import pool, create_engine
+from sqlalchemy import pool, create_engine, text
 from sqlalchemy.engine import URL
 from alembic import context
 
@@ -51,6 +51,9 @@ def run_migrations_online() -> None:
         connect_args={"connect_timeout": 10}  # Fail fast if DB is unreachable
     )
     with connectable.connect() as connection:
+        # Set lock_timeout and statement_timeout to fail fast on hangs instead of waiting indefinitely
+        connection.execute(text("SET lock_timeout = '15s'"))
+        connection.execute(text("SET statement_timeout = '60s'"))
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
