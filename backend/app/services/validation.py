@@ -88,7 +88,12 @@ class ValidationService:
             elif file_ext in (".xlsx", ".xls"):
                 # fastexcel does not support lazy scan; read fully but streaming-friendly
                 # Force phone_number column to be read as string to prevent scientific notation
-                df = pl.read_excel(file_path, infer_schema_length=0, dtypes={"phone_number": pl.Utf8, "customer_phone": pl.Utf8})
+                df = pl.read_excel(file_path, infer_schema_length=0)
+                # Cast phone columns to string to prevent scientific notation
+                if "phone_number" in df.columns:
+                    df = df.with_columns(pl.col("phone_number").cast(pl.Utf8))
+                if "customer_phone" in df.columns:
+                    df = df.with_columns(pl.col("customer_phone").cast(pl.Utf8))
             else:
                 raise ValueError(f"Unsupported file extension: {file_ext}")
         except Exception as e:

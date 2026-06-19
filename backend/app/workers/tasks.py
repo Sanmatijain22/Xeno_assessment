@@ -27,7 +27,13 @@ def process_dataset_task(job_id: str, storage_path: str, country_code: str) -> N
             f"Traceback:\n{traceback.format_exc()}"
         )
         try:
-            asyncio.run(_mark_failed(job_id, str(exc)))
+            # Use asyncio.new_event_loop() to avoid loop attachment issues
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(_mark_failed(job_id, str(exc)))
+            finally:
+                loop.close()
         except Exception as mark_exc:
             logger.error(
                 f"Could not mark job {job_id} as failed in DB:\n"
