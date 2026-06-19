@@ -44,11 +44,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    # Add connect_timeout to fail fast on connection issues instead of hanging indefinitely
+    # Add timeout to fail fast on connection issues instead of hanging indefinitely
     connectable = create_engine(
         DB_URL,
         poolclass=pool.NullPool,
-        connect_args={"connect_timeout": 10}  # Fail fast if DB is unreachable
+        connect_args={"timeout": 10}  # Fail fast if DB is unreachable (asyncpg uses 'timeout')
     )
     with connectable.connect() as connection:
         # Set lock_timeout and statement_timeout to fail fast on hangs instead of waiting indefinitely

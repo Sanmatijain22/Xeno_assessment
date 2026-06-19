@@ -188,7 +188,7 @@ class UploadController(Controller):
             logger.warning(f"Failed to cleanup temp file {file_path}: {exc}")
 
         try:
-            redis_conn = Redis.from_url(settings.REDIS_URL)
+            redis_conn = Redis.from_url(settings.REDIS_URL, socket_timeout=5, socket_connect_timeout=5)
             q = Queue("default", connection=redis_conn)
             from rq import Retry
             q.enqueue(

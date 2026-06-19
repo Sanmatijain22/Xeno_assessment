@@ -31,7 +31,7 @@ engine: AsyncEngine = create_async_engine(
     pool_timeout=settings.db_pool_timeout,
     pool_pre_ping=True,
     future=True,
-    connect_args={"connect_timeout": 10},  # Fail fast on connection issues
+    connect_args={"timeout": 10},  # Fail fast on connection issues (asyncpg uses 'timeout' not 'connect_timeout')
 )
 
 # --- Session factory -------------------------------------------------------
