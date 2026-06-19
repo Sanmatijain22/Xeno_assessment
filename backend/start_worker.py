@@ -4,6 +4,7 @@ Railway worker entry point - starts RQ worker for background task processing
 """
 import os
 import sys
+import time
 from redis import Redis
 from rq import Worker, Queue
 from app.config.settings import settings
@@ -27,5 +28,19 @@ def main():
     
     worker.work(with_scheduler=True)
 
+def run_with_restart():
+    """Run worker with automatic restart on exit"""
+    while True:
+        try:
+            main()
+        except Exception as e:
+            print(f"Worker exited with error: {e}")
+            print("Restarting in 5 seconds...")
+            time.sleep(5)
+
 if __name__ == "__main__":
-    main()
+    # Check if auto-restart is enabled (default for production)
+    if os.getenv("AUTO_RESTART_WORKER", "true").lower() == "true":
+        run_with_restart()
+    else:
+        main()

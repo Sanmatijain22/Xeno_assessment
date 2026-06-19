@@ -20,7 +20,9 @@ def upgrade() -> None:
     op.add_column('country_rules', sa.Column('max_amount', sa.Float(), nullable=True))
     op.add_column('country_rules', sa.Column('min_quantity', sa.Integer(), nullable=True, default=1))
     op.add_column('country_rules', sa.Column('max_quantity', sa.Integer(), nullable=True))
-    op.add_column('country_rules', sa.Column('allow_future_dates', sa.Boolean(), nullable=False, default=False))
+    op.add_column('country_rules', sa.Column('allow_future_dates', sa.Boolean(), nullable=True))
+    op.execute("UPDATE country_rules SET allow_future_dates = FALSE")
+    op.alter_column('country_rules', 'allow_future_dates', nullable=False)
     op.add_column('country_rules', sa.Column('required_fields', JSONB, nullable=True))
     op.add_column('country_rules', sa.Column('email_domain_whitelist', JSONB, nullable=True))
 
