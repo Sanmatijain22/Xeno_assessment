@@ -186,12 +186,12 @@ function MetricCard({ label, rawValue, display, accent }: {
       transition: 'border-color 0.2s, background 0.2s',
     }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = accent
-          ; (e.currentTarget as HTMLDivElement).style.background = `${accent}0d`
+        (e.currentTarget as HTMLDivElement).style.borderColor = accent;
+        (e.currentTarget as HTMLDivElement).style.background = `${accent}0d`
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--line)'
-          ; (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)'
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--line)';
+        (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)'
       }}>
       <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 26, fontWeight: 700, color: accent, marginBottom: 6 }}>
         {shown}
@@ -281,7 +281,6 @@ function CountryAnalysisSection({ countryStats, countryNames }: { countryStats: 
                   </div>
                 ))}
               </div>
-              {/* Pass-rate bar */}
               <div style={{ marginTop: 12, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)' }}>
                 <div style={{ height: 3, borderRadius: 2, background: col, width: `${passRate}%`, transition: `width ${cssDuration(0.8)}s ease` }} />
               </div>
@@ -310,14 +309,12 @@ function DownloadCard({ icon, label, accent, url, recordCount, fileSizeBytes }: 
       if (!res || !res.ok) throw new Error(`Download failed: ${res?.status ?? 'offline'}`)
       const blob = await res.blob()
       const blobUrl = URL.createObjectURL(blob)
-      // Extract filename from Content-Disposition header or generate from URL
       const disposition = res.headers.get('Content-Disposition')
       let filename = 'download.csv'
       if (disposition) {
         const match = disposition.match(/filename="?([^";\n]+)"?/)
         if (match) filename = match[1]
       } else {
-        // Derive filename from URL path
         const parts = url.split('/')
         filename = parts[parts.length - 1] + '.csv'
       }
@@ -378,7 +375,6 @@ function DownloadCard({ icon, label, accent, url, recordCount, fileSizeBytes }: 
 }
 
 function DownloadCenter({ downloads }: { downloads: Downloads }) {
-  // In demo mode urls are null but record counts exist — still show the cards
   const hasAny = downloads.clean_record_count || downloads.error_record_count || downloads.chunks.length > 0
   if (!hasAny) return null
   return (
@@ -411,9 +407,8 @@ function DownloadCenter({ downloads }: { downloads: Downloads }) {
   )
 }
 
-// ─── 3. AI Insights — structured layout ──────────────────────────────────────
+// ─── 3. AI Insights ──────────────────────────────────────────────────────────
 function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIReport; qualityScore: number; countryNames: Record<string, string> }) {
-  // Derive highest-error country from country_analysis
   const highestErrorRegion = Object.entries(report.country_analysis).find(([, v]) => {
     const s = typeof v === 'string' ? v : (v as any)?.status ?? ''
     return s === 'failing'
@@ -428,9 +423,7 @@ function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIR
 
   return (
     <SectionCard title="AI Insights" delay={100}>
-      {/* Top row: summary card + quality tile */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-        {/* Executive summary */}
         <div style={{
           flex: '2 1 280px',
           background: 'rgba(155,107,255,0.06)', border: '1px solid rgba(155,107,255,0.18)',
@@ -444,9 +437,7 @@ function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIR
           </p>
         </div>
 
-        {/* Right column: score + region + action */}
         <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Quality score tile */}
           <div style={{
             background: 'rgba(255,255,255,0.03)', border: '1px solid var(--line)',
             borderRadius: 14, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -462,7 +453,6 @@ function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIR
             </span>
           </div>
 
-          {/* Highest error region */}
           {highestErrorRegion && highestErrorRegion !== 'XX' && (
             <div style={{
               background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)',
@@ -472,14 +462,13 @@ function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIR
                 Highest Error Region
               </div>
               <div style={{ fontSize: 14, fontWeight: 600, color: '#f87171', fontFamily: "'Space Grotesk',sans-serif" }}>
-                {(highestErrorRegion && highestErrorRegion !== 'XX') ? (countryNames[highestErrorRegion] ?? highestErrorRegion) : 'Unknown'}
+                {countryNames[highestErrorRegion] ?? highestErrorRegion}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Primary issues */}
       {primaryIssues.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: 'var(--mist-dim)', fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
@@ -500,7 +489,6 @@ function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIR
         </div>
       )}
 
-      {/* Top errors table */}
       {report.common_errors.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: 'var(--mist-dim)', fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
@@ -537,7 +525,6 @@ function AIInsightsSection({ report, qualityScore, countryNames }: { report: AIR
         </div>
       )}
 
-      {/* Recommendations */}
       {report.recommendations.length > 0 && (
         <div>
           <div style={{ fontSize: 10, color: 'var(--mist-dim)', fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
@@ -617,7 +604,6 @@ function WorkspaceDashboard() {
   const terminalRef = useRef(false)
   const [countryNames, setCountryNames] = useState<Record<string, string>>({})
 
-  // Fetch country names from the DB-backed rules API — no static map
   useEffect(() => {
     apiFetch('/api/rules')
       .then(r => r?.ok ? r.json() : [])
@@ -629,10 +615,8 @@ function WorkspaceDashboard() {
       .catch(() => { })
   }, [])
 
-  // ── Demo mode: skip all API calls, load mock data immediately ──
   useEffect(() => {
     if (!isDemo) return
-    // Simulate a brief "processing" flash so the UI feels real
     const t = setTimeout(() => {
       import('@/lib/mock-data').then(({ DEMO_JOB, DEMO_REPORT, DEMO_DOWNLOADS }) => {
         setJob(DEMO_JOB as unknown as JobDetails)
@@ -702,7 +686,6 @@ function WorkspaceDashboard() {
           <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 600, marginBottom: 10 }}>
             Validation Workspace
           </h1>
-          {/* Demo badge */}
           {isDemo && (
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -837,11 +820,12 @@ function WorkspaceDashboard() {
                           boxShadow: step.label === 'Validator' ? '0 0 18px rgba(16,185,129,0.3)' : 'none',
                           animation: step.label === 'Validator' ? 'pulseGlow 2s ease-in-out infinite' : 'none',
                         }}>
-                        {step.icon}
+                          {step.icon}
+                        </div>
+                        <span style={{ fontSize: 12, color: step.label === 'Validator' ? '#10b981' : 'var(--mist)', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                          {step.label}
+                        </span>
                       </div>
-                     <span style={{ fontSize: 12, color: 'var(--mist)', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-  {step.label}
-</span>
                       {i < 4 && (
                         <div style={{
                           width: 32,
@@ -857,31 +841,27 @@ function WorkspaceDashboard() {
                             inset: 0,
                             background: 'linear-gradient(90deg, transparent, var(--refine), transparent)',
                             animation: 'flowPulse 1.8s ease-in-out infinite',
-                          }}/>
+                          }} />
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
+
+                {/* Flow pills */}
                 <div style={{
                   marginTop: 14,
                   padding: '12px 16px',
                   background: 'rgba(255,255,255,0.015)',
                   borderRadius: 10,
-                  fontSize: 12,
-                  color: 'var(--mist-dim)',
-                  lineHeight: 1.6,
                   display: 'flex',
                   flexWrap: 'wrap',
                   gap: 6,
                   alignItems: 'center',
                 }}>
-                  <span style={{
-                    fontSize: 11,
-                    color: 'var(--mist-dim)',
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    marginRight: 4,
-                  }}>Flow:</span>
+                  <span style={{ fontSize: 11, color: 'var(--mist-dim)', fontFamily: "'IBM Plex Mono', monospace", marginRight: 4 }}>
+                    Flow:
+                  </span>
                   {['Upload file', 'Redis Queue (RQ)', 'Worker Process', 'Polars Validation', 'Clean/Error Output'].map((flowStep, i) => (
                     <span key={flowStep} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <span style={{
@@ -905,7 +885,7 @@ function WorkspaceDashboard() {
             {/* Rules */}
             <div id="rules">
               <SectionCard title="Validation Rules Applied" delay={90}>
-                <div className="validation-rules-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                   {[
                     { label: 'Country Detection', value: 'Inferred from country_code column', icon: '🌍', color: '#4c8dff' },
                     { label: 'Phone Regex', value: 'Country-specific pattern (e.g., IN: ^\\d{10}$)', icon: '📱', color: '#9b6bff' },
@@ -918,47 +898,59 @@ function WorkspaceDashboard() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 14,
-                      padding: '18px 20px',
+                      padding: '16px 18px',
                       background: 'rgba(255,255,255,0.02)',
                       borderRadius: 12,
-                      border: `2px solid ${rule.color}30`,
-                      borderLeft: `2px solid ${rule.color}`,
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderLeft: `3px solid ${rule.color}`,
                       transition: 'all 0.2s ease',
                       cursor: 'default',
                     }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = `${rule.color}08`
-                        e.currentTarget.style.boxShadow = `0 0 12px ${rule.color}20`
+                        const el = e.currentTarget as HTMLDivElement
+                        el.style.background = `${rule.color}0a`
+                        el.style.boxShadow = `0 0 16px ${rule.color}18`
+                        el.style.transform = 'translateY(-1px)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
-                        e.currentTarget.style.boxShadow = 'none'
+                        const el = e.currentTarget as HTMLDivElement
+                        el.style.background = 'rgba(255,255,255,0.02)'
+                        el.style.boxShadow = 'none'
+                        el.style.transform = 'translateY(0)'
                       }}
                     >
                       <div style={{
-                        width: 40,
-                        height: 40,
+                        width: 38,
+                        height: 38,
                         borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.05)',
+                        background: `${rule.color}15`,
+                        border: `1px solid ${rule.color}30`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 24,
+                        fontSize: 20,
                         flexShrink: 0,
                       }}>
                         {rule.icon}
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          fontSize: 14,
-                          fontWeight: 700,
+                          fontSize: 13,
+                          fontWeight: 600,
                           color: '#ffffff',
                           fontFamily: "'Space Grotesk', sans-serif",
-                          marginBottom: 4,
+                          marginBottom: 3,
                         }}>
                           {rule.label}
                         </div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+                        <div style={{
+                          fontSize: 11,
+                          color: 'rgba(255,255,255,0.45)',
+                          lineHeight: 1.5,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
                           {rule.value}
                         </div>
                       </div>
@@ -993,15 +985,8 @@ function WorkspaceDashboard() {
           0%,100% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
           50% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
         }
-        .validation-rules-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-        }
         @media (max-width: 768px) {
-          .validation-rules-grid {
-            grid-template-columns: 1fr;
-          }
+          .rules-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 600px) {
           div[style*="maxWidth: 880px"] { padding-inline: 12px !important; }
@@ -1019,12 +1004,13 @@ export default function WorkspacePage() {
       <Suspense fallback={
         <div style={{
           minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: '#0a0b0e', color: 'var(--mist)', fontFamily: 'sans-serif", fontSize:14 }}>
+          background: '#0a0b0e', color: 'var(--mist)', fontFamily: 'sans-serif', fontSize: 14,
+        }}>
           Loading workspace…
-    </div >
+        </div>
       }>
-  <WorkspaceDashboard />
-      </Suspense >
+        <WorkspaceDashboard />
+      </Suspense>
     </>
   )
 }

@@ -433,7 +433,7 @@ class UploadController(Controller):
         return Response(
             content=path.read_bytes(),
             media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="clean_{job_id}.csv"'},
+            headers={"Content-Disposition": f'attachment; filename="clean.csv"'},
         )
 
     # ── GET /api/downloads/{job_id}/errors ────────────────────────────────
@@ -447,7 +447,7 @@ class UploadController(Controller):
         return Response(
             content=path.read_bytes(),
             media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="errors_{job_id}.csv"'},
+            headers={"Content-Disposition": f'attachment; filename="errors.csv"'},
         )
 
     # ── GET /api/downloads/{job_id}/chunk/{chunk_number} ─────────────────
@@ -462,5 +462,5 @@ class UploadController(Controller):
         return Response(
             content=path.read_bytes(),
             media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="chunk_{chunk_number}_{job_id}.csv"'},
+            headers={"Content-Disposition": f'attachment; filename="chunk_{chunk_number}.csv"'},
         )
