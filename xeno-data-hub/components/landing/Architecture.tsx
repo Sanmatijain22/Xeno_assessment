@@ -383,7 +383,7 @@ export default function Architecture() {
         zIndex: 2,
         paddingBlock: 'clamp(80px, 10vw, 140px)',
         borderTop: '1px solid var(--line-soft)',
-        overflow: 'hidden',
+        overflow: 'visible',
       }}
     >
       {/* Multi-layered ambient glow */}

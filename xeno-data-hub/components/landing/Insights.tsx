@@ -79,6 +79,7 @@ export default function Insights({ latestJob, latestReport }: InsightsProps) {
                 position: 'relative',
                 zIndex: 2,
                 paddingBlock: 'clamp(80px, 12vw, 160px)',
+                overflow: 'visible',
             }}
         >
             <div

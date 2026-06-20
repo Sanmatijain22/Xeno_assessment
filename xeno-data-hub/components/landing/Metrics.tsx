@@ -101,6 +101,7 @@ export default function Metrics({ jobs = [] }: MetricsProps) {
                 zIndex: 2,
                 paddingBlock: 'clamp(80px, 12vw, 160px)',
                 borderTop: '1px solid var(--line-soft)',
+                overflow: 'visible',
             }}
         >
             <div

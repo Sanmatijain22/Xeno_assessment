@@ -435,7 +435,7 @@ export default function Pipeline() {
         position: 'relative',
         zIndex: 2,
         paddingBlock: 'clamp(80px, 12vw, 160px)',
-        overflow: 'hidden',
+        overflow: 'visible',
         willChange: 'transform',
         transform: 'translateZ(0)',
       }}
