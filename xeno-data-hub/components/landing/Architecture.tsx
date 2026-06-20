@@ -568,10 +568,13 @@ export default function Architecture() {
           }
           .architecture-graph-container {
             overflow-x: auto !important;
-            padding-bottom: 8px !important;
+            padding-bottom: 12px !important;
+            margin-inline: -16px !important;
+            padding-inline: 16px !important;
           }
           .architecture-svg {
             min-width: 680px !important;
+            max-width: none !important;
           }
         }
         @media (max-width: 480px) {
