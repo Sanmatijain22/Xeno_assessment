@@ -525,7 +525,6 @@ export default function Architecture() {
           }}>
             Pipeline Flow
           </div>
-<<<<<<< HEAD
           <div style={{
             display: 'flex',
             gap: 0,
@@ -538,12 +537,7 @@ export default function Architecture() {
             scrollbarWidth: 'thin',
           }} className="pipeline-flow-container">
             {FLOW_STEPS.map((step, i) => (
-              <div key={step.label} style={{ display: 'flex', alignItems: 'center', minWidth: 0, flexShrink: 0 }}>
-=======
-          <div className="pipeline-flow-container">
-            {FLOW_STEPS.map((step, i) => (
-              <div key={step.label} className="pipeline-flow-step-wrapper">
->>>>>>> c16caada90249bd4a730eb713fb574b6f08011ee
+              <div key={step.label} style={{ display: 'flex', alignItems: 'center', minWidth: 0, flexShrink: 0 }} className="pipeline-flow-step-wrapper">
                 <FlowStep step={step} idx={i} />
                 {i < FLOW_STEPS.length - 1 && (
                   <div style={{
