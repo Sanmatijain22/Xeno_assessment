@@ -18,22 +18,16 @@ export default function CustomCursor() {
         let my = -100
         let isHovering = false
 
-        // Update outer container position instantly (no transition)
-        const updateOuterPosition = () => {
+        const updateTransform = () => {
             container.style.transform = `translate3d(${mx}px, ${my}px, 0)`
-        }
-
-        // Update inner cursor visual with smooth transition
-        const updateInnerVisual = () => {
-            inner.style.transform = `translate(-50%, -50%) scale(${isHovering ? 2.5 : 1})`
-            inner.style.opacity = isHovering ? '0.9' : '1'
+            inner.style.transform = `translate(-50%, -50%) scale(${isHovering ? 2.0 : 1})`
+            inner.style.opacity = isHovering ? '0.85' : '1'
         }
 
         const onMove = (e: MouseEvent) => {
             mx = e.clientX
             my = e.clientY
-            // Direct DOM mutation - no React re-renders
-            container.style.transform = `translate3d(${mx}px, ${my}px, 0)`
+            updateTransform()
         }
 
         const onOver = (e: MouseEvent) => {
@@ -43,9 +37,7 @@ export default function CustomCursor() {
             const next = !!target
             if (next !== isHovering) {
                 isHovering = next
-                // Only update visual style on hover state change (smooth transition)
-                inner.style.transform = `translate(-50%, -50%) scale(${isHovering ? 2.5 : 1})`
-                inner.style.opacity = isHovering ? '0.9' : '1'
+                updateTransform()
             }
         }
 
@@ -66,7 +58,7 @@ export default function CustomCursor() {
                 left: 0,
                 top: 0,
                 pointerEvents: 'none',
-                zIndex: 999999,
+                zIndex: 99999,
                 transform: 'translate3d(-100px, -100px, 0)',
                 willChange: 'transform',
             }}
@@ -78,15 +70,13 @@ export default function CustomCursor() {
                     height: 8,
                     borderRadius: '50%',
                     background: 'var(--refine)',
-                    boxShadow: '0 0 8px var(--refine), 0 0 16px rgba(155, 107, 255, 0.5)',
+                    boxShadow: '0 0 8px var(--refine)',
                     transform: 'translate(-50%, -50%) scale(1)',
                     transition: 'transform 0.15s ease, opacity 0.15s ease',
                     mixBlendMode: 'normal',
-                    outline: '2px solid var(--refine)',
-                    outlineOffset: '3px',
-                    border: '1px solid rgba(255, 255, 255, 0.8)',
                 }}
             />
         </div>
     )
 }
+

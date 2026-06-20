@@ -2,6 +2,7 @@ import re
 import logging
 import traceback
 import os
+from typing import Optional
 import polars as pl
 import pandera.polars as pa
 from pathlib import Path
