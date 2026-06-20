@@ -524,17 +524,9 @@ export default function Architecture() {
           }}>
             Pipeline Flow
           </div>
-          <div style={{
-            display: 'flex',
-            gap: 0,
-            alignItems: 'stretch',
-            justifyContent: 'center',
-            flexWrap: 'nowrap',
-            overflowX: 'auto',
-            paddingBottom: 4,
-          }}>
+          <div className="pipeline-flow-container">
             {FLOW_STEPS.map((step, i) => (
-              <div key={step.label} style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+              <div key={step.label} className="pipeline-flow-step-wrapper">
                 <FlowStep step={step} idx={i} />
                 {i < FLOW_STEPS.length - 1 && (
                   <div style={{

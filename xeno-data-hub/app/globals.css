@@ -77,3 +77,76 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
+/* Pipeline Flow scroll container fix for mobile overlap and start clipping */
+.pipeline-flow-container {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  justify-content: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.pipeline-flow-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+@media (max-width: 900px) {
+  .pipeline-flow-container {
+    justify-content: flex-start;
+    padding-inline: 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.pipeline-flow-step-wrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Processing Architecture scroll container fix for mobile overlap */
+.architecture-flow-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 24px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  position: relative;
+  overflow-x: auto;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.architecture-flow-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+@media (max-width: 768px) {
+  .architecture-flow-container {
+    justify-content: flex-start;
+    padding-inline: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.architecture-flow-step-wrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .architecture-flow-step-wrapper {
+    flex: 0 0 auto;
+  }
+}
+
+
+
