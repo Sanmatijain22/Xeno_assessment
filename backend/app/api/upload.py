@@ -15,6 +15,11 @@ from sqlalchemy import select, desc
 from redis import Redis
 from rq import Queue
 
+# TCP keepalive constants
+TCP_KEEPIDLE = 0x4  # Seconds before sending first keepalive
+TCP_KEEPINTVL = 0x5  # Seconds between keepalive probes
+TCP_KEEPCNT = 0x6    # Number of failed probes before dropping
+
 from app.schemas.jobs import (
     UploadResponse,
     JobStatusResponse,
@@ -188,7 +193,19 @@ class UploadController(Controller):
             logger.warning(f"Failed to cleanup temp file {file_path}: {exc}")
 
         try:
-            redis_conn = Redis.from_url(settings.REDIS_URL, socket_timeout=5, socket_connect_timeout=5)
+            redis_conn = Redis.from_url(
+                settings.REDIS_URL,
+                socket_keepalive=True,
+                socket_keepalive_options={
+                    TCP_KEEPIDLE: 10,
+                    TCP_KEEPINTVL: 5,
+                    TCP_KEEPCNT: 3
+                },
+                socket_timeout=30,
+                socket_connect_timeout=30,
+                health_check_interval=15,
+                retry_on_timeout=True
+            )
             q = Queue("default", connection=redis_conn)
             from rq import Retry
             q.enqueue(

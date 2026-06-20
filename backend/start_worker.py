@@ -9,15 +9,25 @@ from redis import Redis
 from rq import Worker, Queue
 from app.config.settings import settings
 
+# TCP keepalive constants
+TCP_KEEPIDLE = 0x4  # Seconds before sending first keepalive
+TCP_KEEPINTVL = 0x5  # Seconds between keepalive probes
+TCP_KEEPCNT = 0x6    # Number of failed probes before dropping
+
 def main():
     """Start RQ worker to process background tasks"""
     redis_conn = Redis.from_url(
         settings.REDIS_URL,
         socket_keepalive=True,
-        socket_keepalive_options={},
-        socket_timeout=None,
-        socket_connect_timeout=10,
-        health_check_interval=30
+        socket_keepalive_options={
+            TCP_KEEPIDLE: 10,
+            TCP_KEEPINTVL: 5,
+            TCP_KEEPCNT: 3
+        },
+        socket_timeout=60,
+        socket_connect_timeout=30,
+        health_check_interval=15,
+        retry_on_timeout=True
     )
     queue = Queue("default", connection=redis_conn)
     

@@ -1,6 +1,37 @@
 # Redis Connection Timeout and Migration Fixes
 
-## Fixes Applied
+## Latest Fix (June 2026)
+
+### Problem
+Redis connection timeout error occurring during pubsub operations:
+```
+redis.exceptions.TimeoutError: Timeout reading from socket
+Worker b68734a44e6b42eab55d09621ef9353c: Redis connection timeout, quitting...
+```
+
+### Root Cause
+The previous fixes had empty `socket_keepalive_options={}` which meant TCP keepalive was enabled but not configured with proper parameters. The health check interval of 30 seconds was too long for cloud environments with aggressive connection timeouts.
+
+### Solution Applied
+Enhanced Redis connection settings with proper TCP keepalive parameters across all Redis connections:
+
+**TCP Keepalive Parameters:**
+- `TCP_KEEPIDLE: 10` - Start sending keepalives after 10 seconds of idle
+- `TCP_KEEPINTVL: 5` - Send keepalive probes every 5 seconds  
+- `TCP_KEEPCNT: 3` - Drop connection after 3 failed probes
+
+**Additional Improvements:**
+- Reduced `health_check_interval` from 30 to 15 seconds for more frequent health checks
+- Added `retry_on_timeout=True` to retry on timeout errors
+- Increased `socket_timeout` to 60 seconds for worker connections
+- Increased `socket_connect_timeout` to 30 seconds for initial connections
+
+**Files Modified:**
+1. `backend/start_worker.py` - Enhanced worker Redis connection
+2. `backend/app/workers/tasks.py` - Enhanced tasks Redis connection  
+3. `backend/app/api/upload.py` - Enhanced API Redis connection
+
+## Previous Fixes
 
 ### 1. Migration Fix - NOT NULL Column Issue
 **File:** `backend/alembic/versions/add_enhanced_validation_config.py`
