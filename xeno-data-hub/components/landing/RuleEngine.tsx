@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 
 const COUNTRY_RULES = [
@@ -29,7 +29,7 @@ const FLAG_MAP: Record<string, string> = {
     AU: '🇦🇺'
 }
 
-function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+const Toggle = memo(function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     return (
         <button
             className={`rule-toggle${on ? ' on' : ''}`}
@@ -38,10 +38,16 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
             style={{ flexShrink: 0 }}
         />
     )
-}
+})
 
-function RuleValue({ value }: { value: string }) {
+const RuleValue = memo(function RuleValue({ value }: { value: string }) {
     const [flash, setFlash] = useState(false)
+
+    const handleClick = useCallback(() => {
+        setFlash(true)
+        setTimeout(() => setFlash(false), 600)
+    }, [])
+
     return (
         <div
             style={{
@@ -56,17 +62,14 @@ function RuleValue({ value }: { value: string }) {
                 transition: 'border-color 0.2s ease, color 0.2s ease',
                 flexShrink: 0,
             }}
-            onClick={() => {
-                setFlash(true)
-                setTimeout(() => setFlash(false), 600)
-            }}
+            onClick={handleClick}
         >
             {value}
         </div>
     )
-}
+})
 
-function GlassPanel({
+const GlassPanel = memo(function GlassPanel({
     title,
     children,
 }: {
@@ -81,10 +84,13 @@ function GlassPanel({
                     'linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))',
                 border: '1px solid var(--line)',
                 borderRadius: 18,
-                backdropFilter: 'blur(20px) saturate(160%)',
+                backdropFilter: 'blur(8px)', // Reduced from blur(20px) for performance
+                WebkitBackdropFilter: 'blur(8px)',
                 boxShadow:
-                    '0 30px 80px -30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+                    '0 20px 40px -20px rgba(0,0,0,0.5)', // Simplified and reduced shadow
                 overflow: 'hidden',
+                willChange: 'transform',
+                transform: 'translateZ(0)',
             }}
         >
             {/* Panel header */}
@@ -124,9 +130,9 @@ function GlassPanel({
             {children}
         </div>
     )
-}
+})
 
-function RuleRow({
+const RuleRow = memo(function RuleRow({
     label,
     value,
     on,
@@ -165,7 +171,7 @@ function RuleRow({
             </div>
         </div>
     )
-}
+})
 
 function formatPhoneRule(countryCode: string, regex: string): string {
     const code = countryCode.toUpperCase()
@@ -194,7 +200,7 @@ interface RuleEngineProps {
     onToggleRule?: (id: string, is_active: boolean) => void
 }
 
-export default function RuleEngine({ rules = [], onToggleRule }: RuleEngineProps) {
+const RuleEngine = memo(function RuleEngine({ rules = [], onToggleRule }: RuleEngineProps) {
     const [countryToggles, setCountryToggles] = useState(
         COUNTRY_RULES.map((r) => r.initialOn)
     )
@@ -205,56 +211,64 @@ export default function RuleEngine({ rules = [], onToggleRule }: RuleEngineProps
 
     const hasLiveRules = rules && rules.length > 0
 
-    const displayCountryRules = hasLiveRules 
-        ? rules.map(r => ({
-            id: r.id,
-            flag: FLAG_MAP[r.country_code] || '🌐',
-            name: r.country_name,
-            rule: formatPhoneRule(r.country_code, r.phone_regex),
-            on: r.is_active
-        }))
-        : COUNTRY_RULES.map((r, idx) => ({
-            id: String(idx),
-            flag: r.flag,
-            name: r.name,
-            rule: r.rule,
-            on: countryToggles[idx]
-        }))
-
-    const displayDateFormats = DATE_FORMATS.map((f, idx) => {
+    // Memoize displayCountryRules to prevent recreation on every render
+    const displayCountryRules = useMemo(() => {
         if (hasLiveRules) {
-            const matchingRules = rules.filter(r => r.date_format === f.format)
-            const hasMatching = matchingRules.length > 0
-            const on = hasMatching
-                ? matchingRules.some(r => r.is_active)
-                : (localDateToggles[f.format] ?? f.initialOn)
-            return {
-                id: f.name,
-                name: f.name,
-                format: f.format,
-                on,
-                hasMatching
-            }
+            return rules.map(r => ({
+                id: r.id,
+                flag: FLAG_MAP[r.country_code] || '🌐',
+                name: r.country_name,
+                rule: formatPhoneRule(r.country_code, r.phone_regex),
+                on: r.is_active
+            }))
         } else {
-            return {
+            return COUNTRY_RULES.map((r, idx) => ({
+                id: String(idx),
+                flag: r.flag,
+                name: r.name,
+                rule: r.rule,
+                on: countryToggles[idx]
+            }))
+        }
+    }, [hasLiveRules, rules, countryToggles])
+
+    // Memoize displayDateFormats to prevent recreation on every render
+    const displayDateFormats = useMemo(() => {
+        if (hasLiveRules) {
+            return DATE_FORMATS.map((f) => {
+                const matchingRules = rules.filter(r => r.date_format === f.format)
+                const hasMatching = matchingRules.length > 0
+                const on = hasMatching
+                    ? matchingRules.some(r => r.is_active)
+                    : (localDateToggles[f.format] ?? f.initialOn)
+                return {
+                    id: f.name,
+                    name: f.name,
+                    format: f.format,
+                    on,
+                    hasMatching
+                }
+            })
+        } else {
+            return DATE_FORMATS.map((f, idx) => ({
                 id: String(idx),
                 name: f.name,
                 format: f.format,
                 on: dateToggles[idx],
                 hasMatching: false
-            }
+            }))
         }
-    })
+    }, [hasLiveRules, rules, localDateToggles, dateToggles])
 
-    const handleToggleCountry = (id: string, currentOn: boolean, idx: number) => {
+    const handleToggleCountry = useCallback((id: string, currentOn: boolean, idx: number) => {
         if (hasLiveRules && onToggleRule) {
             onToggleRule(id, !currentOn)
         } else {
             setCountryToggles(prev => prev.map((v, i) => i === idx ? !v : v))
         }
-    }
+    }, [hasLiveRules, onToggleRule])
 
-    const handleToggleDate = (formatString: string, currentOn: boolean, idx: number) => {
+    const handleToggleDate = useCallback((formatString: string, currentOn: boolean, idx: number) => {
         if (hasLiveRules && onToggleRule) {
             const matchingRules = rules.filter(r => r.date_format === formatString)
             if (matchingRules.length > 0) {
@@ -270,7 +284,7 @@ export default function RuleEngine({ rules = [], onToggleRule }: RuleEngineProps
         } else {
             setDateToggles(prev => prev.map((v, i) => i === idx ? !v : v))
         }
-    }
+    }, [hasLiveRules, onToggleRule, rules])
 
     return (
         <section
@@ -280,6 +294,8 @@ export default function RuleEngine({ rules = [], onToggleRule }: RuleEngineProps
                 zIndex: 2,
                 paddingBlock: 'clamp(80px, 12vw, 160px)',
                 borderTop: '1px solid var(--line-soft)',
+                willChange: 'transform',
+                transform: 'translateZ(0)',
             }}
         >
             <div
@@ -334,13 +350,17 @@ export default function RuleEngine({ rules = [], onToggleRule }: RuleEngineProps
                     className="rules-panels"
                     initial={{ opacity: 0, y: 24 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-10% 0px' }}
-                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                    // Optimized viewport settings: trigger much earlier (-40% instead of -10%)
+                    viewport={{ once: true, margin: '-40% 0px', amount: 0.1 }}
+                    // Reduced duration from 0.7s to 0.4s for faster feel
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                     style={{
                         display: 'grid',
                         gridTemplateColumns: '1fr 1fr',
                         gap: 32,
                         marginTop: 56,
+                        willChange: 'transform',
+                        transform: 'translateZ(0)',
                     }}
                 >
                     {/* Country rules panel */}
@@ -411,4 +431,6 @@ export default function RuleEngine({ rules = [], onToggleRule }: RuleEngineProps
       `}</style>
         </section>
     )
-}
+})
+
+export default RuleEngine

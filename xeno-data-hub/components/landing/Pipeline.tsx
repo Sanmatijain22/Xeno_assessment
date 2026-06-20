@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState, memo, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 import { EASE_OUT, motionDuration } from '@/lib/motion'
 
 /* ─────────────────────────────────────────
    SpotlightLabel — cursor-reactive radial glow on titles
    ───────────────────────────────────────── */
-const SpotlightLabel = memo(function SpotlightLabel({ children }: { children: React.ReactNode }) {
+const SpotlightLabel = ({ children }: { children: React.ReactNode }) => {
   const ref = useRef<HTMLSpanElement>(null)
   const glowRef = useRef<HTMLSpanElement>(null)
   const cachedRect = useRef<DOMRect | null>(null)
@@ -53,7 +53,7 @@ const SpotlightLabel = memo(function SpotlightLabel({ children }: { children: Re
       />
     </span>
   )
-})
+}
 
 const STAGES = [
   {
@@ -149,7 +149,7 @@ const STAGES = [
 /* ─────────────────────────────────────────
    VisualCard — glassmorphism + hover lift + border glow
    ───────────────────────────────────────── */
-const VisualCard = memo(function VisualCard({
+const VisualCard = ({
   visual,
   stageColor,
   isInView,
@@ -159,7 +159,7 @@ const VisualCard = memo(function VisualCard({
   stageColor: string
   isInView: boolean
   index: number
-}) {
+}) => {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -199,12 +199,12 @@ const VisualCard = memo(function VisualCard({
       {visual}
     </motion.div>
   )
-})
+}
 
 /* ─────────────────────────────────────────
    Stage row — scan line + spotlight title
    ───────────────────────────────────────── */
-const Stage = memo(function Stage({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) {
+const Stage = ({ stage, index }: { stage: (typeof STAGES)[0]; index: number }) => {
   const ref = useRef<HTMLDivElement>(null)
   // Increased margin from -15% to -40% to trigger animations much earlier
   const isInView = useInView(ref, { once: true, margin: '-40% 0px', amount: 0.1 })
@@ -368,7 +368,7 @@ const Stage = memo(function Stage({ stage, index }: { stage: (typeof STAGES)[0];
   )
 }
 
-const Pipeline = memo(function Pipeline() {
+export default function Pipeline() {
   const railRef = useRef<HTMLDivElement>(null)
   const cometRef = useRef<HTMLDivElement>(null)
 
@@ -553,6 +553,4 @@ const Pipeline = memo(function Pipeline() {
       `}</style>
     </section>
   )
-})
-
-export default Pipeline
+}
