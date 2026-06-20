@@ -260,6 +260,7 @@ function StatCard({ value, label, accent, delay }: { value: string; label: strin
       transition={{ duration: motionDuration(0.5), delay, ease: EASE_OUT }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      data-cursor-hover
       style={{
         flex: '1 1 130px', minWidth: 120,
         padding: '18px 16px',
@@ -302,6 +303,7 @@ function FlowStep({ step, idx }: { step: typeof FLOW_STEPS[number]; idx: number 
       transition={{ duration: motionDuration(0.45), delay: idx * 0.11, ease: EASE_OUT }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      data-cursor-hover
       style={{
         flex: '1 1 0',
         minWidth: 110,

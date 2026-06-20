@@ -192,6 +192,7 @@ export default function Insights({ latestJob, latestReport }: InsightsProps) {
                     initial={{ opacity: 0, y: 28 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: motionDuration(0.8), ease: EASE_OUT, delay: motionDuration(0.15) }}
+                    data-cursor-hover
                     style={{
                         background:
                             'linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))',

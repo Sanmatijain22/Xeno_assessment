@@ -50,6 +50,7 @@ const RuleValue = memo(function RuleValue({ value }: { value: string }) {
 
     return (
         <div
+            data-cursor-hover
             style={{
                 fontFamily: "'IBM Plex Mono', monospace",
                 fontSize: 12,

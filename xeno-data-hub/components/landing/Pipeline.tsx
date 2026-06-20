@@ -175,6 +175,7 @@ const VisualCard = ({
         scale: { duration: 0.4, ease: EASE_OUT },
         y: { type: 'spring', stiffness: 260, damping: 22 },
       }}
+      data-cursor-hover
       style={{
         height: 100,
         display: 'flex',
