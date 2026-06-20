@@ -316,7 +316,7 @@ function FlowStep({ step, idx }: { step: typeof FLOW_STEPS[number]; idx: number 
         transform: hov ? 'translateY(-4px)' : 'translateY(0)',
         cursor: 'default',
         boxShadow: hov ? `0 10px 28px ${step.color}28` : 'none',
-      }}
+      }} className="flow-step-card"
     >
       {/* SVG icon, colored to match the step */}
       <div style={{
@@ -439,12 +439,13 @@ export default function Architecture() {
         </div>
 
         {/* ── Architecture graph ── */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 56 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 56 }} className="architecture-graph-container">
           <svg
             viewBox={`0 0 ${SVG_W} ${SVG_H}`}
             width="100%"
             style={{ maxWidth: SVG_W, overflow: 'visible' }}
             aria-label="Stack architecture diagram"
+            className="architecture-svg"
           >
             <defs>
               <filter id="pulseBlur" x="-100%" y="-100%" width="300%" height="300%">
@@ -532,9 +533,11 @@ export default function Architecture() {
             flexWrap: 'nowrap',
             overflowX: 'auto',
             paddingBottom: 4,
-          }}>
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'thin',
+          }} className="pipeline-flow-container">
             {FLOW_STEPS.map((step, i) => (
-              <div key={step.label} style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+              <div key={step.label} style={{ display: 'flex', alignItems: 'center', minWidth: 0, flexShrink: 0 }}>
                 <FlowStep step={step} idx={i} />
                 {i < FLOW_STEPS.length - 1 && (
                   <div style={{
@@ -550,6 +553,40 @@ export default function Architecture() {
         </motion.div>
 
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .pipeline-flow-container {
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            gap: 12px !important;
+          }
+          .flow-step-card {
+            flex: 1 1 140px !important;
+            max-width: 160px !important;
+            min-width: 140px !important;
+          }
+          .architecture-graph-container {
+            overflow-x: auto !important;
+            padding-bottom: 8px !important;
+          }
+          .architecture-svg {
+            min-width: 680px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .pipeline-flow-container {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .flow-step-card {
+            flex: 1 1 auto !important;
+            max-width: 100% !important;
+            min-width: 100% !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </section>
   )
 }
