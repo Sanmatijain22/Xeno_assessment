@@ -152,21 +152,21 @@ function PipelineTracker({ status }: { status: JobStatus | 'loading' }) {
   const steps = ['Uploaded', 'Queued', 'Processing', 'Finished']
   const activeIdx = status === 'queued' ? 1 : status === 'processing' ? 2 : status === 'completed' ? 3 : status === 'failed' ? 3 : 0
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', maxWidth: 480, margin: '0 auto 36px' }}>
-      <div style={{ position: 'absolute', top: 15, left: 30, right: 30, height: 2, background: 'var(--line)', zIndex: 0 }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', maxWidth: 480, margin: '0 auto 36px' }} className="pipeline-tracker-inner">
+      <div style={{ position: 'absolute', top: 15, left: 30, right: 30, height: 2, background: 'var(--line)', zIndex: 0 }} className="pipeline-bg" />
       <div style={{
         position: 'absolute', top: 15, left: 30,
         width: `${Math.min((activeIdx / 3) * 100, 100)}%`, maxWidth: 'calc(100% - 60px)',
         height: 2, background: status === 'failed' ? '#f87171' : 'var(--refine)',
         transition: `width ${cssDuration(0.6)}s ease`, zIndex: 0,
-      }} />
+      }} className="pipeline-progress" />
       {steps.map((label, i) => {
         const done = i < activeIdx || (i === 3 && status === 'completed')
         const active = i === activeIdx && status !== 'completed' && status !== 'failed'
         const fail = i === 3 && status === 'failed'
         const col = fail ? '#f87171' : (done || active ? 'var(--refine)' : 'var(--line)')
         return (
-          <div key={label} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <div key={label} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }} className="pipeline-step">
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
               background: '#0a0b0e', border: `2px solid ${col}`,
@@ -197,7 +197,7 @@ function MetricCard({ label, rawValue, display, accent }: {
       background: 'rgba(255,255,255,0.03)', border: '1px solid var(--line)',
       borderRadius: 16, padding: '22px 18px', textAlign: 'center', flex: 1, minWidth: 120,
       transition: 'border-color 0.2s, background 0.2s',
-    }}
+    }} className="metric-card"
       onMouseEnter={e => {
         (e.currentTarget as HTMLDivElement).style.borderColor = accent;
         (e.currentTarget as HTMLDivElement).style.background = `${accent}0d`
@@ -209,7 +209,7 @@ function MetricCard({ label, rawValue, display, accent }: {
       <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 26, fontWeight: 700, color: accent, marginBottom: 6 }}>
         {shown}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--mist-dim)', fontFamily: "'Space Grotesk',sans-serif", letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+      <div style={{ fontSize: 11, color: 'var(--mist-dim)', fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '0.05em', textTransform: 'uppercase' }}>
         {label}
       </div>
     </div>
@@ -730,7 +730,7 @@ function WorkspaceDashboard() {
         </div>
 
         {/* Pipeline tracker */}
-        <div id="pipeline">
+        <div id="pipeline" className="pipeline-tracker">
           {status !== 'loading' && <PipelineTracker status={status as JobStatus} />}
         </div>
 
@@ -818,7 +818,7 @@ function WorkspaceDashboard() {
                   background: 'rgba(255,255,255,0.02)',
                   borderRadius: 16,
                   position: 'relative',
-                }}>
+                }} className="architecture-flow">
                   {[
                     { label: 'Upload', icon: <Upload size={22} style={{ color: 'var(--refine)' }} />, color: 'var(--refine)' },
                     { label: 'Redis Queue', icon: <Zap size={22} style={{ color: 'var(--signal)' }} />, color: 'var(--signal)' },
@@ -826,7 +826,7 @@ function WorkspaceDashboard() {
                     { label: 'Validator', icon: <Check size={24} style={{ color: '#10b981' }} />, color: '#10b981' },
                     { label: 'Output', icon: <Package size={22} style={{ color: 'var(--mist)' }} />, color: 'var(--mist)' },
                   ].map((step, i) => (
-                    <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                    <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: 1 }} className="architecture-step">
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flex: 1 }}>
                         <div style={{
                           width: 60,
@@ -840,7 +840,7 @@ function WorkspaceDashboard() {
                           fontSize: 26,
                           boxShadow: step.label === 'Validator' ? '0 0 18px rgba(16,185,129,0.3)' : 'none',
                           animation: step.label === 'Validator' ? 'pulseGlow 2s ease-in-out infinite' : 'none',
-                        }}>
+                        }} className="architecture-icon">
                           {step.icon}
                         </div>
                         <span style={{ fontSize: 12, color: step.label === 'Validator' ? '#10b981' : 'var(--mist)', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
@@ -856,7 +856,7 @@ function WorkspaceDashboard() {
                           opacity: 0.5,
                           position: 'relative',
                           overflow: 'hidden',
-                        }}>
+                        }} className="architecture-connector">
                           <div style={{
                             position: 'absolute',
                             inset: 0,
@@ -906,7 +906,7 @@ function WorkspaceDashboard() {
             {/* Rules */}
             <div id="rules">
               <SectionCard title="Validation Rules Applied" delay={90}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }} className="rules-grid">
                   {[
                     { label: 'Country Detection', value: 'Inferred from country_code column', icon: <Globe size={18} style={{ color: '#4c8dff' }} />, color: '#4c8dff' },
                     { label: 'Phone Regex', value: 'Country-specific pattern (e.g., IN: ^\\d{10}$)', icon: <Phone size={18} style={{ color: '#9b6bff' }} />, color: '#9b6bff' },
@@ -1011,6 +1011,63 @@ function WorkspaceDashboard() {
         }
         @media (max-width: 600px) {
           div[style*="maxWidth: 880px"] { padding-inline: 12px !important; }
+        }
+        @media (max-width: 768px) {
+          div[style*="padding: 28px 24px"] { padding: 20px 16px !important; }
+          div[style*="padding: 24px 20px"] { padding: 20px 16px !important; }
+          div[style*="padding: 16px 18px"] { padding: 14px 14px !important; }
+        }
+        @media (max-width: 600px) {
+          div[style*="display: flex"] { flex-wrap: wrap !important; }
+          div[style*="gap: 12"] { gap: 8px !important; }
+          div[style*="gap: 10"] { gap: 8px !important; }
+        }
+        @media (max-width: 768px) {
+          .architecture-flow { flex-direction: column !important; gap: 24px !important; }
+          .architecture-step { flex-direction: column !important; width: 100% !important; }
+          .architecture-connector { 
+            width: 2px !important; 
+            height: 24px !important; 
+            transform: rotate(90deg) !important;
+            margin: 8px 0 !important;
+          }
+          .architecture-icon { width: 50px !important; height: 50px !important; }
+        }
+        @media (max-width: 600px) {
+          div[style*="gridTemplateColumns: repeat(2, 1fr)"] { gridTemplateColumns: 1fr !important; }
+        }
+        @media (max-width: 600px) {
+          .pipeline-tracker { 
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+          .pipeline-tracker-inner {
+            flex-direction: column !important;
+            gap: 20px !important;
+            padding: 20px 10px !important;
+          }
+          .pipeline-bg, .pipeline-progress {
+            width: 2px !important;
+            height: 100% !important;
+            top: 0 !important;
+            left: 15px !important;
+            right: auto !important;
+          }
+          .pipeline-step {
+            flex-direction: row !important;
+            justify-content: flex-start !important;
+            gap: 16px !important;
+            padding-left: 32px !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .metric-card { 
+            minWidth: 100px !important;
+            padding: 16px 12px !important;
+          }
+          .metric-card div[style*="fontSize: 26"] { font-size: 20px !important; }
+          .metric-card div[style*="fontSize: 11"] { font-size: 10px !important; }
         }
       `}</style>
     </div>
