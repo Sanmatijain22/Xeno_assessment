@@ -5,6 +5,7 @@ Railway worker entry point - starts RQ worker for background task processing
 import os
 import sys
 import time
+import threading
 from redis import Redis
 from rq import Worker, Queue
 from app.config.settings import settings
@@ -53,10 +54,29 @@ def main():
     print(f"Starting RQ worker for queue: default")
     print(f"Redis URL: {settings.REDIS_URL}")
     
+    # Start heartbeat thread to monitor connection
+    stop_event = threading.Event()
+    
+    def heartbeat():
+        """Periodically check Redis connection and restart worker if lost"""
+        while not stop_event.is_set():
+            try:
+                time.sleep(30)  # Check every 30 seconds
+                redis_conn.ping()
+            except Exception as exc:
+                print(f"Heartbeat: Redis connection lost: {exc}")
+                print("Heartbeat: Triggering worker restart...")
+                stop_event.set()
+                # Force worker to exit by raising an exception
+                os._exit(1)
+    
+    heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
+    heartbeat_thread.start()
+    
     worker.work(with_scheduler=True)
 
 def run_with_restart():
-    """Run worker with automatic restart on exit"""
+    """Run worker with automatic restart on exit or connection loss"""
     while True:
         try:
             main()
