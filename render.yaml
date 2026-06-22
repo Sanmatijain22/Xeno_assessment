@@ -1,0 +1,104 @@
+databases:
+  - name: xeno-db
+    databaseName: xeno
+    user: xeno_user
+    plan: free
+
+services:
+  - type: web
+    name: xeno-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/docs
+    envVars:
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: DB_USER
+        fromDatabase:
+          name: xeno-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: xeno-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: xeno-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: xeno-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: xeno-db
+          property: database
+      - key: REDIS_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: OUTPUT_DIR
+        value: ./outputs
+
+  - type: worker
+    name: xeno-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: RQ_WORKER
+        value: true
+      - key: AUTO_RESTART_WORKER
+        value: true
+      - key: ENV
+        value: production
+      - key: DB_USER
+        fromDatabase:
+          name: xeno-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: xeno-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: xeno-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: xeno-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: xeno-db
+          property: database
+      - key: REDIS_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: OUTPUT_DIR
+        value: ./outputs
+
+  - type: web
+    name: xeno-frontend
+    runtime: node
+    buildCommand: npm run build
+    startCommand: npm start
+    plan: free
+    rootDir: ./xeno-data-hub
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://xeno-api.onrender.com
