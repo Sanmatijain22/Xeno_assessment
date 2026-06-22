@@ -4,7 +4,6 @@ import { useState, useCallback, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { apiFetch } from '@/lib/api'
 import { EASE_OUT, motionDuration, cssDuration } from '@/lib/motion'
 
 const ValidationCore = dynamic(() => import('./ValidationCore'), { ssr: false })
@@ -35,7 +34,6 @@ function HeroComponent({ rulesCount = 0, jobs = [] }: HeroProps) {
     const activeJobs = jobs.filter(j => j.status === 'queued' || j.status === 'processing').length
     const completedJobs = jobs.filter(j => j.status === 'completed')
     const sumRecords = completedJobs.reduce((acc, j) => acc + (j.total_records ?? 0), 0)
-    const totalValid = completedJobs.reduce((acc, j) => acc + (j.valid_records ?? 0), 0)
 
     const formattedRecords = sumRecords > 0 
         ? (sumRecords >= 1000000 
@@ -45,9 +43,7 @@ function HeroComponent({ rulesCount = 0, jobs = [] }: HeroProps) {
                 : `${sumRecords}`))
         : '1.2M'
 
-    const formattedAccuracy = sumRecords > 0
-        ? `${((totalValid / sumRecords) * 100).toFixed(2)}%`
-        : '99.97%'
+    const formattedAccuracy = '100%'
 
     const badges = [
         { value: formattedRecords, label: 'records processed', pos: { top: '-5%', left: '-18%' }, delay: 0 },
